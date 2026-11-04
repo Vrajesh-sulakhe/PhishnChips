@@ -1,0 +1,24 @@
+# Environment variables & secrets
+.env
+*.env
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Evidence & Scan artifacts
+evidence/
+logs/
+*.log
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

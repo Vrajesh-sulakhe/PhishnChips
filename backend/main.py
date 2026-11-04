@@ -1,19 +1,50 @@
+"""
+main.py - FastAPI Manager & Async Orchestrator for Phish&Chips.
+Handles async job dispatch, polling, human approval gates, screenshot streaming, and demo assets.
+"""
+
 import os
 import uuid
-import json
+import re
 import asyncio
-import subprocess
 from pathlib import Path
+from contextlib import asynccontextmanager
 from typing import Optional, Dict, Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
-import httpx
+from dotenv import load_dotenv
 
-app = FastAPI(title="Phish&Chips Containment API", version="1.0.0")
+load_dotenv()
+
+from validation import validate_url, check_rate_limit, ValidationError
+from events import init_job_events, get_events
+import scanner
+
+BASE_DIR = Path("/root/phish-n-chips")
+if not BASE_DIR.exists():
+    BASE_DIR = Path(__file__).resolve().parent.parent
+
+FRONTEND_DIR = BASE_DIR / "frontend"
+EVIDENCE_DIR = BASE_DIR / "evidence"
+DEMO_DIR = BASE_DIR / "demo" / "fake-pages"
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Start background janitor
+    janitor_task = asyncio.create_task(scanner.janitor_cleanup_task())
+    yield
+    janitor_task.cancel()
+
+app = FastAPI(
+    title="Phish&Chips: Ephemeral Sandbox Orchestrator",
+    description="Track 01 · Blast Radius Zero // Vultr Hackathon",
+    version="2.0.0",
+    lifespan=lifespan
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,172 +54,126 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-BASE_DIR = Path("/root/phish-n-chips")
-EVIDENCE_DIR = BASE_DIR / "evidence"
-FRONTEND_DIR = BASE_DIR / "frontend"
-EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
-
-app.mount("/static/evidence", StaticFiles(directory=str(EVIDENCE_DIR)), name="evidence")
-
-VULTR_INFERENCE_API_KEY = os.getenv("VULTR_INFERENCE_API_KEY", "")
-VULTR_INFERENCE_MODEL = os.getenv("VULTR_INFERENCE_MODEL", "llama2-13b-chat")
+# Mount static frontend assets
+if FRONTEND_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 class ScanRequest(BaseModel):
     url: str
 
-class ScanResponse(BaseModel):
-    scan_id: str
-    target_url: str
-    status: str
-    risk_score: int
-    classification: str
-    threat_indicators: list[str]
-    analysis_summary: str
-    containment_metrics: Dict[str, Any]
-    artifacts: Dict[str, Optional[str]]
+class ApprovalRequest(BaseModel):
+    approve: bool
 
 @app.get("/")
-def serve_index():
+def serve_root():
     index_file = FRONTEND_DIR / "index.html"
     if not index_file.exists():
-        raise HTTPException(status_code=404, detail="Frontend index.html not found.")
+        return {"status": "ok", "service": "Phish&Chips Backend (index.html not built yet)"}
     return FileResponse(index_file)
 
-async def query_vultr_inference(telemetry: Dict[str, Any]) -> Dict[str, Any]:
-    if not VULTR_INFERENCE_API_KEY:
-        has_pwd = telemetry.get("domMetadata", {}).get("hasPasswordInput", False)
-        req_count = len(telemetry.get("networkRequests", []))
-        score = 88 if has_pwd else (40 if req_count > 10 else 10)
-        return {
-            "risk_score": score,
-            "classification": "Phishing / Credential Harvester" if has_pwd else "Benign Page",
-            "threat_indicators": [
-                "Unverified password input detected on target domain" if has_pwd else "No critical form anomalies",
-                f"Generated {req_count} outbound HTTP connections during render"
-            ],
-            "analysis_summary": "Heuristic evaluation completed inside isolated container. Add VULTR_INFERENCE_API_KEY for deep LLM threat synthesis."
-        }
-
-    prompt = f"""
-Detonation Telemetry from sandboxed execution:
-Target: {telemetry.get('target')}
-Final URL: {telemetry.get('finalUrl')}
-DOM Metadata: {json.dumps(telemetry.get('domMetadata', {}))}
-Redirect Chain: {json.dumps(telemetry.get('redirects', []))}
-Network Calls: {len(telemetry.get('networkRequests', []))} outbound requests
-
-Respond strictly in valid JSON matching this schema:
-{{
-  "risk_score": <int 0-100>,
-  "classification": "<Benign | Phishing | Suspicious Redirect | Malware Delivery>",
-  "threat_indicators": ["<indicator 1>", "<indicator 2>"],
-  "analysis_summary": "<2-sentence threat summary>"
-}}
-"""
-
-    headers = {
-        "Authorization": f"Bearer {VULTR_INFERENCE_API_KEY}",
-        "Content-Type": "application/json"
+@app.get("/health")
+@app.get("/api/health")
+def health_check():
+    return {
+        "status": "healthy",
+        "service": "phish-n-chips-backend",
+        "network": "phishnet",
+        "sandbox_image": "phishchips-sandbox"
     }
-    payload = {
-        "model": VULTR_INFERENCE_MODEL,
-        "messages": [
-            {"role": "system", "content": "You are a cyber security threat analyst. Output valid JSON only."},
-            {"role": "user", "content": prompt}
-        ],
-        "temperature": 0.2
-    }
+
+@app.post("/api/scan")
+async def start_scan(req: ScanRequest, request: Request):
+    client_ip = request.client.host if request.client else "127.0.0.1"
+
+    if not check_rate_limit(client_ip):
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded (maximum 20 scans per minute). Please try again shortly."
+        )
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post("https://api.vultrinference.com/v1/chat/completions", headers=headers, json=payload)
-            if resp.status_code == 200:
-                raw_text = resp.json()["choices"][0]["message"]["content"].strip()
-                if raw_text.startswith("```"):
-                    raw_text = raw_text.split("```")[1].strip()
-                    if raw_text.startswith("json"):
-                        raw_text = raw_text[4:].strip()
-                return json.loads(raw_text)
-    except Exception as e:
-        print(f"Inference error: {e}")
+        validated_url = validate_url(req.url)
+    except ValidationError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+
+    job_id = uuid.uuid4().hex[:8]
+    init_job_events(job_id)
+
+    scanner.jobs[job_id] = {
+        "job_id": job_id,
+        "target_url": validated_url,
+        "status": "queued",
+        "screenshots": [],
+        "raw_result": None,
+        "verdict": None,
+        "error": None
+    }
+
+    # Dispatch background worker
+    asyncio.create_task(scanner.process_scan_job(job_id, validated_url))
+
+    return {"job_id": job_id, "status": "queued"}
+
+@app.get("/api/scan/{job_id}")
+async def get_scan_status(job_id: str):
+    job = scanner.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Scan job '{job_id}' not found.")
+
+    events = get_events(job_id)
 
     return {
-        "risk_score": 50,
-        "classification": "Analysis Degraded",
-        "threat_indicators": ["Inference API call failure"],
-        "analysis_summary": "Sandbox telemetry acquired successfully; fallback evaluation rendered."
+        "job_id": job_id,
+        "target_url": job.get("target_url"),
+        "status": job.get("status"),
+        "events": events,
+        "screenshots": job.get("screenshots", []),
+        "result": job.get("verdict"),
+        "raw_telemetry": job.get("raw_result"),
+        "error": job.get("error")
     }
 
-@app.post("/api/scan", response_model=ScanResponse)
-async def execute_scan(req: ScanRequest):
-    url = req.url.strip()
-    if not url.startswith(("http://", "https://")):
-        url = "https://" + url
+@app.post("/api/scan/{job_id}/approve")
+async def approve_scan_action(job_id: str, body: ApprovalRequest):
+    job = scanner.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Scan job '{job_id}' not found.")
 
-    scan_id = uuid.uuid4().hex[:8]
-    scan_dir = EVIDENCE_DIR / scan_id
-    scan_dir.mkdir(parents=True, exist_ok=True)
-    os.chmod(scan_dir, 0o777)
+    if job.get("status") != "awaiting_approval":
+        raise HTTPException(status_code=400, detail="Job is not currently awaiting human authorization.")
 
-    cmd = [
-        "docker", "run", "--rm",
-        f"--name=scan-{scan_id}",
-        "--memory=1g",
-        "--cpus=1.0",
-        "--pids-limit=100",
-        "--cap-drop=ALL",
-        "-e", f"TARGET_URL={url}",
-        "-e", "TIMEOUT_MS=15000",
-        "-v", f"{scan_dir}:/output",
-        "phish-sandbox"
-    ]
+    delivered = scanner.handle_approval(job_id, body.approve)
+    return {
+        "job_id": job_id,
+        "approved": body.approve,
+        "action_acknowledged": delivered
+    }
 
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        await asyncio.wait_for(proc.communicate(), timeout=25.0)
-    except asyncio.TimeoutError:
-        subprocess.run(["docker", "kill", f"scan-{scan_id}"], capture_output=True)
-        raise HTTPException(status_code=408, detail="Sandbox execution timed out (forced containment termination).")
-    except Exception as ex:
-        raise HTTPException(status_code=500, detail=f"Container execution failed: {str(ex)}")
+@app.get("/api/scan/{job_id}/shot/{name}")
+async def get_screenshot(job_id: str, name: str):
+    # Path traversal protection
+    if not re.match(r"^[a-zA-Z0-9_\-]+\.png$", name):
+        raise HTTPException(status_code=400, detail="Invalid screenshot artifact identifier.")
 
-    report_path = scan_dir / "report.json"
-    screenshot_path = scan_dir / "screenshot.png"
+    shot_path = EVIDENCE_DIR / job_id / name
+    if not shot_path.exists():
+        raise HTTPException(status_code=404, detail="Screenshot artifact not found.")
 
-    if not report_path.exists():
-        raise HTTPException(status_code=500, detail="Sandbox failed to produce telemetry report.")
+    return FileResponse(shot_path, media_type="image/png")
 
-    with open(report_path, "r") as f:
-        telemetry = json.load(f)
+# Demo Endpoints
+@app.get("/demo/fake-bank")
+def serve_fake_bank():
+    fake_page = DEMO_DIR / "bank_login.html"
+    if not fake_page.exists():
+        raise HTTPException(status_code=404, detail="Demo page not found.")
+    return FileResponse(fake_page)
 
-    threat_analysis = await query_vultr_inference(telemetry)
-
-    return ScanResponse(
-        scan_id=scan_id,
-        target_url=url,
-        status="completed" if not telemetry.get("error") else "errored",
-        risk_score=threat_analysis.get("risk_score", 0),
-        classification=threat_analysis.get("classification", "Unknown"),
-        threat_indicators=threat_analysis.get("threat_indicators", []),
-        analysis_summary=threat_analysis.get("analysis_summary", ""),
-        containment_metrics={
-            "cgroup_memory_limit": "1024MB",
-            "cpu_limit": "1.0 Core",
-            "capabilities_dropped": "ALL",
-            "network_requests_logged": len(telemetry.get("networkRequests", [])),
-            "redirects_traversed": len(telemetry.get("redirects", [])),
-            "execution_error": telemetry.get("error")
-        },
-        artifacts={
-            "screenshot_url": f"/static/evidence/{scan_id}/screenshot.png" if screenshot_path.exists() else None,
-            "report_json_url": f"/static/evidence/{scan_id}/report.json"
-        }
+@app.get("/demo/fake-download.bin")
+def serve_fake_download():
+    dummy_bytes = b"MZ\x90\x00\x03\x00\x00\x00PHISHCHIPS_CANARY_PAYLOAD_TEST"
+    return Response(
+        content=dummy_bytes,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": 'attachment; filename="ApexSecurityUpdate.exe"'}
     )
-
-@app.get("/health")
-def health_check():
-    return {"status": "healthy", "service": "phish-n-chips-backend"}
