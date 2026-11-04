@@ -1,0 +1,30 @@
+{
+  "target": "https://example.com",
+  "timestamp": "2026-11-04T15:35:42.324Z",
+  "redirects": [],
+  "networkRequests": [
+    {
+      "url": "https://example.com/",
+      "method": "GET",
+      "resourceType": "document"
+    },
+    {
+      "url": "https://example.com/s.js",
+      "method": "GET",
+      "resourceType": "script"
+    }
+  ],
+  "domMetadata": {
+    "title": "Example Domain",
+    "hasPasswordInput": false,
+    "inputCount": 0,
+    "inputs": [],
+    "formsCount": 0,
+    "externalScripts": [
+      "https://example.com/s.js"
+    ]
+  },
+  "error": null,
+  "finalUrl": "https://example.com/",
+  "httpStatus": 200
+}
