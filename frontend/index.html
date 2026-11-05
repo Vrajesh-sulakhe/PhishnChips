@@ -3,14 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Phish&Chips // Fresh phish, fried in a sandbox.</title>
+  <title>Phish&Chips // Autonomous Zero-Blast-Radius Phishing Detonation</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/static/styles.css">
+  <!-- Google Identity Services (GIS) Client -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="bg-black text-white min-h-screen flex overflow-x-hidden">
 
-  <!-- MATERIAL UI DRAWER (SIDEBAR) -->
-  <aside class="sidebar hidden md:flex">
+  <!-- ======================================================== -->
+  <!-- 1. MATERIAL UI NAVIGATION DRAWER (SIDEBAR FOR CONSOLE)   -->
+  <!-- ======================================================== -->
+  <aside id="appSidebar" class="sidebar hidden md:flex">
     <div class="space-y-6">
       
       <!-- Brand Header -->
@@ -24,7 +28,7 @@
             <p class="text-[10px] text-zinc-400 font-mono">Track 01 &bull; Blast Radius Zero</p>
           </div>
         </a>
-        <span class="text-[10px] text-zinc-500 font-mono bg-[#1a1a1a] px-1.5 py-0.5 rounded border border-[#2b2b2b]">v2.1</span>
+        <span class="text-[10px] text-zinc-500 font-mono bg-[#1a1a1a] px-1.5 py-0.5 rounded border border-[#2b2b2b]">v2.2</span>
       </div>
 
       <!-- Navigation Menu -->
@@ -86,7 +90,9 @@
     </div>
   </aside>
 
-  <!-- MAIN CANVAS -->
+  <!-- ======================================================== -->
+  <!-- 2. MAIN APPLICATION CANVAS                               -->
+  <!-- ======================================================== -->
   <main class="flex-1 flex flex-col min-w-0 bg-black min-h-screen">
 
     <!-- TOP APP BAR -->
@@ -110,7 +116,7 @@
         </div>
       </div>
 
-      <!-- Right App Bar Status Chips -->
+      <!-- Right App Bar: Status & Auth Profile Controls -->
       <div class="flex items-center gap-3">
         <!-- phishnet Status Chip -->
         <div class="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#121212] border border-[#282828] text-xs font-mono text-emerald-400">
@@ -118,13 +124,44 @@
           <span>phishnet 172.30.0.0/16</span>
         </div>
 
-        <!-- Node Profile Pill -->
-        <div class="flex items-center gap-2 bg-[#141414] px-3 py-1.5 rounded-lg border border-[#282828] text-xs font-mono">
-          <div class="w-5 h-5 rounded bg-[#f59e0b] text-black font-bold flex items-center justify-center text-[10px]">
-            VP
-          </div>
-          <span class="text-zinc-200">Vultr BLR Control Plane</span>
+        <!-- Unauthenticated Buttons (Sign In / Sign Up) -->
+        <div id="unauthControls" class="flex items-center gap-2">
+          <button id="openSignInBtn" class="md-btn-outlined text-xs py-1.5 px-3">
+            Sign In
+          </button>
+          <button id="openSignUpBtn" class="md-btn-primary text-xs py-1.5 px-3.5 flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+            <span>Google Sign-In</span>
+          </button>
         </div>
+
+        <!-- Authenticated Profile Capsule (Hidden when logged out) -->
+        <div id="authProfileCapsule" class="hidden relative">
+          <button id="userProfileBtn" class="flex items-center gap-2 bg-[#141414] hover:bg-[#1f1f1f] px-3 py-1.5 rounded-lg border border-[#282828] text-xs font-mono transition-colors">
+            <img id="userAvatarImg" src="https://api.dicebear.com/7.x/bottts/svg?seed=PhishChips" alt="Avatar" class="w-5 h-5 rounded-full bg-zinc-800">
+            <span id="userNameLabel" class="text-zinc-200 font-semibold max-w-[130px] truncate">SecOps Analyst</span>
+            <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+
+          <!-- Dropdown Menu -->
+          <div id="userDropdownMenu" class="hidden absolute right-0 mt-2 w-56 bg-[#161616] border border-[#2f2f2f] rounded-xl shadow-2xl py-2 z-50 text-xs font-mono">
+            <div class="px-4 py-2 border-b border-[#242424]">
+              <div id="dropdownUserEmail" class="text-zinc-400 text-[11px] truncate">analyst@phishchips.internal</div>
+              <div class="text-[10px] text-[#f59e0b] font-bold mt-0.5 uppercase tracking-wider">Lead Security Analyst</div>
+            </div>
+            <button id="menuDashboardBtn" class="w-full text-left px-4 py-2 hover:bg-[#202020] text-zinc-200 flex items-center gap-2">
+              <span>⚡</span> <span>Detonation Console</span>
+            </button>
+            <button id="menuHistoryBtn" class="w-full text-left px-4 py-2 hover:bg-[#202020] text-zinc-200 flex items-center gap-2">
+              <span>📋</span> <span>My Scans</span>
+            </button>
+            <div class="border-t border-[#242424] my-1"></div>
+            <button id="logoutBtn" class="w-full text-left px-4 py-2 hover:bg-[#2a1313] text-red-400 flex items-center gap-2 font-semibold">
+              <span>🚪</span> <span>Sign Out</span>
+            </button>
+          </div>
+        </div>
+
       </div>
     </header>
 
@@ -132,7 +169,7 @@
     <div class="p-6 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
 
       <!-- ======================================================== -->
-      <!-- VIEW 1: DETONATION CONSOLE (Material UI Dashboard) -->
+      <!-- VIEW 1: DETONATION CONSOLE (MATERIAL DASHBOARD)          -->
       <!-- ======================================================== -->
       <div id="dashboardSection" class="space-y-6">
 
@@ -500,16 +537,19 @@
         <!-- RECENT ACTIVITY DATA TABLE -->
         <div id="recentActivitySection" class="md-card space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#242424] pb-4">
-            <h3 class="text-base font-bold text-white">Recent Activity / Detonations</h3>
+            <div>
+              <h3 class="text-base font-bold text-white">Recent Activity / Detonations</h3>
+              <p class="text-xs text-zinc-500 font-mono mt-0.5">Persisted in SQLite ACID database</p>
+            </div>
 
             <div class="flex items-center gap-2 text-xs font-mono">
               <input 
+                id="searchScansInput"
                 type="text" 
-                placeholder="Search targets..." 
+                placeholder="Filter target URLs..." 
                 class="bg-[#181818] border border-[#333333] rounded px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-[#f59e0b]"
               >
-              <button class="md-btn-outlined py-1 px-3 text-xs">Filter</button>
-              <button class="md-btn-outlined py-1 px-3 text-xs">Sort by &or;</button>
+              <button id="refreshScansBtn" class="md-btn-outlined py-1 px-3 text-xs">Refresh</button>
             </div>
           </div>
 
@@ -562,30 +602,62 @@
       </div>
 
       <!-- ======================================================== -->
-      <!-- VIEW 2: PRODUCT SHOWCASE (Material UI Landing Page) -->
+      <!-- VIEW 2: PRODUCT SHOWCASE (MATERIALISTIC LANDING PAGE)    -->
       <!-- ======================================================== -->
       <div id="landingSection" class="hidden space-y-12">
 
-        <!-- HERO SECTION -->
-        <div class="p-8 sm:p-14 md-card text-center space-y-6">
+        <!-- ANIMATED HERO SECTION -->
+        <div class="p-8 sm:p-14 md-card text-center space-y-6 landing-grid-bg relative overflow-hidden">
+          
+          <!-- Pulsing Radar Indicator -->
           <div class="inline-flex items-center gap-2 px-3 py-1 rounded bg-[#1a1a1a] border border-[#333333] text-xs font-mono text-[#f59e0b]">
-            <span class="w-2 h-2 rounded-full bg-[#f59e0b]"></span>
-            <span>VULTR AGENT RUSH &bull; TRACK 01: BLAST RADIUS ZERO</span>
+            <span class="w-2 h-2 rounded-full bg-[#f59e0b] radar-pulse"></span>
+            <span>VULTR AGENT RUSH 2026 // TRACK 01: BLAST RADIUS ZERO</span>
           </div>
 
-          <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-tight">
-            Fresh Phish, Fried in a <br>
-            <span class="text-[#f59e0b]">Zero-Blast-Radius Sandbox.</span>
+          <!-- Bold Material Headline -->
+          <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-tight">
+            Autonomous Phishing Detonation <br>
+            <span class="text-[#f59e0b]">Inside Zero-Blast-Radius Sandboxes.</span>
           </h1>
 
+          <!-- Crisp Subtitle -->
           <p class="text-sm sm:text-base text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-            Autonomous agentic phishing detonation inside cgroup-constrained, unprivileged micro-containers.
-            Zero host exposure. Zero persistent state. Instant synthetic threat analysis powered by Vultr Serverless Inference.
+            Unprivileged, cgroup-constrained Chromium micro-containers. Zero host exposure.
+            Intercepts credential harvesting, drops SSRF exfiltration to cloud metadata, and synthesizes visual threats via Vultr Serverless Inference.
           </p>
 
-          <div class="flex flex-wrap items-center justify-center gap-4 pt-4">
+          <!-- Interactive Quick Scan Bar on Hero -->
+          <div class="max-w-2xl mx-auto pt-2">
+            <div class="p-2 rounded-xl bg-[#181818] border border-[#333333] flex flex-col sm:flex-row gap-2 shadow-xl">
+              <input 
+                id="heroTargetUrl"
+                type="text" 
+                placeholder="Paste suspicious target link to detonate..." 
+                class="flex-1 bg-black border border-[#2b2b2b] rounded-lg px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 font-mono focus:outline-none focus:border-[#f59e0b]"
+              >
+              <button id="heroDetonateBtn" class="md-btn-primary px-6 py-2.5 text-xs font-bold whitespace-nowrap">
+                <span>Detonate Now</span> <span>⚡</span>
+              </button>
+            </div>
+            
+            <div class="flex flex-wrap items-center justify-center gap-2 pt-3 text-xs font-mono text-zinc-500">
+              <span>Quick tests:</span>
+              <button class="hero-preset hover:text-white" data-url="demo://fake-bank">🔴 Fake Bank Scam</button>
+              <span>&bull;</span>
+              <button class="hero-preset hover:text-white" data-url="https://example.com">🟢 Example.com</button>
+              <span>&bull;</span>
+              <button class="hero-preset hover:text-white" data-url="https://en.wikipedia.org">🟢 Wikipedia</button>
+            </div>
+          </div>
+
+          <!-- Action CTAs -->
+          <div class="flex flex-wrap items-center justify-center gap-4 pt-4 border-t border-[#222222]">
             <button id="ctaLaunchBtn" class="md-btn-primary px-7 py-3 text-sm">
               Launch Detonation Console ⚡
+            </button>
+            <button id="ctaSignInBtn" class="md-btn-outlined px-6 py-3 text-sm">
+              Sign In with Google &rarr;
             </button>
             <a href="https://github.com/Vrajesh-sulakhe/PhishnChips" target="_blank" rel="noopener noreferrer" class="md-btn-outlined px-6 py-3 text-sm">
               GitHub Repository &nearr;
@@ -593,7 +665,7 @@
           </div>
         </div>
 
-        <!-- 4 GUARANTEES -->
+        <!-- 4 CONTAINMENT GUARANTEES GRID -->
         <div class="space-y-4">
           <div class="text-center space-y-1">
             <h3 class="text-xl font-bold text-white">Blast Radius Zero Guarantees</h3>
@@ -636,7 +708,7 @@
         </div>
 
         <!-- ORCHESTRATION PIPELINE WALKTHROUGH -->
-        <div class="md-card space-y-6">
+        <div id="architecture" class="md-card space-y-6">
           <div class="flex items-center justify-between border-b border-[#242424] pb-4">
             <div>
               <h3 class="text-base font-bold text-white">End-to-End Orchestration Architecture</h3>
@@ -669,7 +741,64 @@
 
     </div>
 
-    <!-- PATTERN B APPROVAL MODAL -->
+    <!-- ======================================================== -->
+    <!-- 3. MATERIAL AUTHENTICATION DIALOG (LOGIN / SIGN UP MODAL)-->
+    <!-- ======================================================== -->
+    <div id="authModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="auth-modal-dialog max-w-md w-full p-7 space-y-5 text-center relative">
+        
+        <!-- Close Button -->
+        <button id="closeAuthModalBtn" class="absolute top-4 right-4 text-zinc-400 hover:text-white text-lg font-mono">
+          &times;
+        </button>
+
+        <!-- Brand Icon & Header -->
+        <div class="w-12 h-12 rounded-xl bg-[#f59e0b] text-black text-2xl font-bold flex items-center justify-center mx-auto shadow-lg">
+          🍟
+        </div>
+
+        <div>
+          <h3 id="authModalTitle" class="text-lg font-bold text-white tracking-tight">Sign In to Phish&amp;Chips</h3>
+          <p class="text-xs text-zinc-400 mt-1 leading-relaxed">
+            Access live sandboxes, save forensic scan history, and receive incident alerts.
+          </p>
+        </div>
+
+        <!-- Google OAuth 2.0 Sign In Button -->
+        <div class="space-y-3 pt-2">
+          <button id="googleSignInBtn" class="md-btn-google">
+            <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+            <span>Continue with Google</span>
+          </button>
+
+          <!-- Hidden Google GIS target container -->
+          <div id="g_id_signin" class="hidden"></div>
+
+          <!-- Divider -->
+          <div class="relative flex items-center justify-center my-3">
+            <div class="border-t border-[#292929] w-full"></div>
+            <span class="bg-[#141414] px-3 text-[10px] uppercase font-bold text-zinc-500 font-mono tracking-wider absolute">
+              Instant Hackathon Demo
+            </span>
+          </div>
+
+          <!-- 1-Click Guest Analyst Login Button for Judges -->
+          <button id="demoLoginBtn" class="md-btn-demo">
+            <span>⚡</span>
+            <span>Continue as Guest Analyst (Demo Mode)</span>
+          </button>
+        </div>
+
+        <p class="text-[10px] text-zinc-500 font-mono">
+          Zero tracking cookies. Anonymous SQLite sessions expire in 14 days.
+        </p>
+
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- 4. PATTERN B APPROVAL MODAL                              -->
+    <!-- ======================================================== -->
     <div id="approvalModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div class="max-w-xl w-full bg-[#181818] border-2 border-[#f59e0b] rounded-xl p-6 sm:p-7 space-y-4 shadow-2xl">
         <div class="flex items-start gap-4">

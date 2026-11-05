@@ -14,6 +14,7 @@ from typing import Dict, Any, Optional
 
 from events import log_event, init_job_events
 from analyzer import analyze_threat
+import db
 
 BASE_DIR = Path("/root/phish-n-chips")
 if not BASE_DIR.exists():
@@ -190,11 +191,46 @@ async def process_scan_job(job_id: str, url: str):
             log_event(job_id, "🍟 Phish fried. Sandbox destroyed.", stage="DONE")
             job["status"] = "done"
 
+            # Persist finished scan in SQLite database
+            try:
+                verdict_data = job.get("verdict") or {}
+                db.save_scan(
+                    job_id=job_id,
+                    target_url=url,
+                    status="done",
+                    user_id=job.get("user_id"),
+                    verdict=verdict_data.get("verdict"),
+                    confidence=verdict_data.get("confidence"),
+                    threat_source=verdict_data.get("threat_source"),
+                    screenshots=job.get("screenshots", []),
+                    reasons=verdict_data.get("reasons", []),
+                    asks_for=verdict_data.get("asks_for", []),
+                    pretending_to_be=verdict_data.get("pretending_to_be")
+                )
+            except Exception as dbe:
+                print(f"Error persisting scan to DB: {dbe}")
+
         except Exception as e:
             job["status"] = "error"
             job["error"] = str(e)
             log_event(job_id, f"Scan aborted: {str(e)}", stage="ERROR")
             log_event(job_id, "🍟 Phish fried. Sandbox destroyed.", stage="DONE")
+
+            # Persist error scan in SQLite database
+            try:
+                db.save_scan(
+                    job_id=job_id,
+                    target_url=url,
+                    status="error",
+                    user_id=job.get("user_id"),
+                    verdict="ERROR",
+                    confidence=0.0,
+                    threat_source="Sandbox Runtime Abort",
+                    screenshots=job.get("screenshots", []),
+                    reasons=[f"Scan aborted: {str(e)}"]
+                )
+            except Exception:
+                pass
         finally:
             active_scans_count = max(0, active_scans_count - 1)
 

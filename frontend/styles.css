@@ -219,12 +219,62 @@ html, body {
   padding: 0.5rem 1rem;
   border-radius: 8px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   transition: all 0.15s ease;
 }
 
 .md-btn-outlined:hover {
   background-color: #1a1a1a;
   border-color: #555555;
+}
+
+/* Google Sign In Button */
+.md-btn-google {
+  background-color: #ffffff;
+  color: #1f1f1f;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  width: 100%;
+}
+
+.md-btn-google:hover {
+  background-color: #f1f3f4;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.md-btn-demo {
+  background-color: #1f2937;
+  color: #f3f4f6;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  border: 1px solid #374151;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  width: 100%;
+}
+
+.md-btn-demo:hover {
+  background-color: #374151;
+  border-color: #4b5563;
 }
 
 /* 5. Clean Vertical Bar Chart with REAL Hover-Only Tooltips */
@@ -409,7 +459,39 @@ html, body {
   pointer-events: none;
 }
 
-/* 10. Scrollbar */
+/* 10. Landing Page Animations & Grid */
+.landing-grid-bg {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+@keyframes radarWave {
+  0% { transform: scale(0.96); opacity: 0.8; }
+  50% { transform: scale(1.05); opacity: 0.3; }
+  100% { transform: scale(0.96); opacity: 0.8; }
+}
+
+.radar-pulse {
+  animation: radarWave 3s ease-in-out infinite;
+}
+
+/* 11. Material Dialog Modal */
+.auth-modal-dialog {
+  background-color: #141414;
+  border: 1px solid #2e2e2e;
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  animation: modalScale 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalScale {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* 12. Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

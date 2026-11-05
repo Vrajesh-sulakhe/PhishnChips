@@ -14,6 +14,7 @@ echo "==> Step 1: Syncing workspace files to Vultr VM..."
 rsync -avz --delete \
   --exclude 'backend/venv' \
   --exclude 'evidence' \
+  --exclude 'data' \
   --exclude 'logs' \
   --exclude '.git' \
   --exclude '.DS_Store' \
@@ -28,7 +29,7 @@ ssh -i "$KEY_PATH" root@${SERVER_IP} << 'REMOTE_EXEC'
   cd /root/phish-n-chips
 
   echo "--> Ensuring directories exist..."
-  mkdir -p evidence logs scripts backend frontend sandbox demo/fake-pages deploy
+  mkdir -p evidence logs data scripts backend frontend sandbox demo/fake-pages deploy
 
   echo "--> Setting up phishnet isolated network & iptables containment..."
   bash scripts/setup_network.sh

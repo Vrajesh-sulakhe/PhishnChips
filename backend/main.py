@@ -1,6 +1,7 @@
 """
 main.py - FastAPI Manager & Async Orchestrator for Phish&Chips.
-Handles async job dispatch, SSE event streaming, human approval gates, screenshot streaming, and demo assets.
+Handles async job dispatch, SSE event streaming, human approval gates, screenshot streaming,
+Google OAuth authentication, SQLite persistence, and demo assets.
 """
 
 import os
@@ -10,12 +11,12 @@ import json
 import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse, JSONResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -24,6 +25,8 @@ load_dotenv()
 from validation import validate_url, check_rate_limit, ValidationError
 from events import init_job_events, get_events, subscribe_job_events, unsubscribe_job_events
 import scanner
+import db
+import auth
 
 BASE_DIR = Path("/root/phish-n-chips")
 if not BASE_DIR.exists():
@@ -35,6 +38,8 @@ DEMO_DIR = BASE_DIR / "demo" / "fake-pages"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Initialize SQLite database with WAL mode
+    db.init_db()
     # Start background janitor
     janitor_task = asyncio.create_task(scanner.janitor_cleanup_task())
     yield
@@ -43,7 +48,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Phish&Chips: Ephemeral Sandbox Orchestrator",
     description="Track 01 · Blast Radius Zero // Vultr Hackathon",
-    version="2.1.0",
+    version="2.2.0",
     lifespan=lifespan
 )
 
@@ -64,6 +69,13 @@ class ScanRequest(BaseModel):
 
 class ApprovalRequest(BaseModel):
     approve: bool
+
+class GoogleAuthRequest(BaseModel):
+    credential: str
+
+class DemoAuthRequest(BaseModel):
+    name: Optional[str] = "SecOps Lead Analyst"
+    email: Optional[str] = "analyst@phishchips.internal"
 
 @app.get("/")
 def serve_root():
@@ -89,8 +101,118 @@ def health_check():
         "iptables_phishnet": "Enforced (Host & RFC1918 Dropped)",
         "inference_endpoint": "api.vultrinference.com",
         "inference_status": "Connected (api.vultrinference.com)" if api_key_set else "Standby (Deterministic Heuristics Active)",
-        "sandbox_image": "phishchips-sandbox"
+        "sandbox_image": "phishchips-sandbox",
+        "database": "SQLite 3 (WAL mode)"
     }
+
+# --- Authentication Endpoints ---
+
+@app.post("/api/auth/google")
+async def google_login(payload: GoogleAuthRequest, response: Response):
+    """Authenticates or registers user using Google ID token."""
+    user_info = await auth.verify_google_id_token(payload.credential)
+    if not user_info or not user_info.get("email"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid Google credential token."
+        )
+
+    user = db.get_or_create_user(
+        email=user_info["email"],
+        name=user_info.get("name", "Google Analyst"),
+        avatar_url=user_info.get("avatar_url"),
+        provider="google",
+        provider_id=user_info.get("google_id")
+    )
+
+    session_token = db.create_session(user["id"])
+
+    # Set HTTP-only session cookie
+    response.set_cookie(
+        key="phishchips_session",
+        value=session_token,
+        httponly=True,
+        samesite="lax",
+        secure=False, # Set to True in production HTTPS
+        max_age=14 * 86400
+    )
+
+    return {
+        "status": "ok",
+        "authenticated": True,
+        "token": session_token,
+        "user": user
+    }
+
+@app.post("/api/auth/demo")
+async def demo_login(response: Response, payload: Optional[DemoAuthRequest] = None):
+    """Instant 1-click login for hackathon judges & testers without Google credentials."""
+    name = (payload and payload.name) or "SecOps Lead Analyst"
+    email = (payload and payload.email) or "analyst@phishchips.internal"
+
+    user = db.get_or_create_user(
+        email=email,
+        name=name,
+        avatar_url="https://api.dicebear.com/7.x/bottts/svg?seed=PhishChipsLead",
+        provider="demo",
+        provider_id="demo_analyst_01"
+    )
+
+    session_token = db.create_session(user["id"])
+
+    response.set_cookie(
+        key="phishchips_session",
+        value=session_token,
+        httponly=True,
+        samesite="lax",
+        secure=False,
+        max_age=14 * 86400
+    )
+
+    return {
+        "status": "ok",
+        "authenticated": True,
+        "token": session_token,
+        "user": user
+    }
+
+@app.get("/api/auth/me")
+async def get_current_user(request: Request):
+    """Returns currently authenticated user session or anonymous status."""
+    user = auth.get_current_user_optional(request)
+    if not user:
+        return {"authenticated": False, "user": None}
+    return {"authenticated": True, "user": user}
+
+@app.post("/api/auth/logout")
+async def logout(request: Request, response: Response):
+    """Invalidates session and clears cookie."""
+    token = auth.extract_session_token(request)
+    if token:
+        db.delete_session(token)
+    response.delete_cookie(key="phishchips_session")
+    return {"status": "ok", "authenticated": False}
+
+@app.get("/api/user/scans")
+async def get_user_scans(request: Request):
+    """Retrieves scans belonging to the currently logged in user."""
+    user = auth.get_current_user_required(request)
+    scans = db.get_user_scans(user["id"])
+    return {"user_id": user["id"], "scans": scans}
+
+@app.get("/api/scans/recent")
+def get_recent_scans():
+    """Retrieves platform-wide recent scan activity from SQLite database."""
+    scans = db.get_recent_scans(limit=15)
+    return {"scans": scans}
+
+@app.get("/api/stats")
+def get_stats():
+    """Returns platform summary metrics for landing page and dashboard."""
+    stats = db.get_analytics_summary()
+    return stats
+
+# --- Scan Endpoints ---
 
 @app.post("/api/scan")
 async def start_scan(req: ScanRequest, request: Request):
@@ -107,11 +229,15 @@ async def start_scan(req: ScanRequest, request: Request):
     except ValidationError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
 
+    user = auth.get_current_user_optional(request)
+    user_id = user["id"] if user else None
+
     job_id = uuid.uuid4().hex[:8]
     init_job_events(job_id)
 
     scanner.jobs[job_id] = {
         "job_id": job_id,
+        "user_id": user_id,
         "target_url": validated_url,
         "status": "queued",
         "screenshots": [],
@@ -120,10 +246,21 @@ async def start_scan(req: ScanRequest, request: Request):
         "error": None
     }
 
+    # Record initial queued entry in SQLite
+    try:
+        db.save_scan(
+            job_id=job_id,
+            target_url=validated_url,
+            status="queued",
+            user_id=user_id
+        )
+    except Exception as e:
+        print(f"Error saving initial scan to DB: {e}")
+
     # Dispatch background worker
     asyncio.create_task(scanner.process_scan_job(job_id, validated_url))
 
-    return {"job_id": job_id, "status": "queued"}
+    return {"job_id": job_id, "status": "queued", "user_id": user_id}
 
 @app.get("/api/scan/{job_id}/stream")
 async def stream_scan_events(job_id: str):

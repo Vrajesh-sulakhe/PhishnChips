@@ -5,6 +5,7 @@ let eventSource = null;
 let currentVerdictData = null;
 let currentLanguage = 'en';
 let totalEventCount = 0;
+let currentUser = null;
 
 // DOM Elements
 const scanForm = document.getElementById('scanForm');
@@ -28,6 +29,10 @@ const viewDashboardBtn = document.getElementById('viewDashboardBtn');
 const viewLandingBtn = document.getElementById('viewLandingBtn');
 const ctaLaunchBtn = document.getElementById('ctaLaunchBtn');
 
+// Hero Section Elements
+const heroTargetUrl = document.getElementById('heroTargetUrl');
+const heroDetonateBtn = document.getElementById('heroDetonateBtn');
+
 // Verdict Card Elements
 const verdictCard = document.getElementById('verdictCard');
 const verdictHeading = document.getElementById('verdictHeading');
@@ -49,6 +54,28 @@ const closeModalBtn = document.getElementById('closeModalBtn');
 // Control Plane Telemetry Elements
 const slotsBadge = document.getElementById('slotsBadge');
 const activityTableBody = document.getElementById('activityTableBody');
+const searchScansInput = document.getElementById('searchScansInput');
+const refreshScansBtn = document.getElementById('refreshScansBtn');
+
+// Authentication Elements
+const unauthControls = document.getElementById('unauthControls');
+const authProfileCapsule = document.getElementById('authProfileCapsule');
+const userProfileBtn = document.getElementById('userProfileBtn');
+const userAvatarImg = document.getElementById('userAvatarImg');
+const userNameLabel = document.getElementById('userNameLabel');
+const userDropdownMenu = document.getElementById('userDropdownMenu');
+const dropdownUserEmail = document.getElementById('dropdownUserEmail');
+const logoutBtn = document.getElementById('logoutBtn');
+const menuDashboardBtn = document.getElementById('menuDashboardBtn');
+const menuHistoryBtn = document.getElementById('menuHistoryBtn');
+
+const authModal = document.getElementById('authModal');
+const openSignInBtn = document.getElementById('openSignInBtn');
+const openSignUpBtn = document.getElementById('openSignUpBtn');
+const ctaSignInBtn = document.getElementById('ctaSignInBtn');
+const closeAuthModalBtn = document.getElementById('closeAuthModalBtn');
+const googleSignInBtn = document.getElementById('googleSignInBtn');
+const demoLoginBtn = document.getElementById('demoLoginBtn');
 
 // Translations Catalog
 const LOCALIZATIONS = {
@@ -84,13 +111,15 @@ const LOCALIZATIONS = {
 // 1. Navigation & View Switcher (Dashboard vs Landing Page)
 function showView(view) {
   if (view === 'dashboard') {
-    dashboardSection.classList.remove('hidden');
-    landingSection.classList.add('hidden');
-    topbarTitle.innerText = 'Overview';
+    if (dashboardSection) dashboardSection.classList.remove('hidden');
+    if (landingSection) landingSection.classList.add('hidden');
+    if (topbarTitle) topbarTitle.innerText = 'Overview';
 
     if (viewDashboardBtn) {
-      viewDashboardBtn.className = 'px-3.5 py-1 rounded-full bg-white/10 text-white font-semibold transition-all shadow-sm';
-      viewLandingBtn.className = 'px-3.5 py-1 rounded-full text-zinc-400 hover:text-white transition-all';
+      viewDashboardBtn.className = 'px-3 py-1 rounded bg-[#242424] text-white font-semibold transition-all';
+    }
+    if (viewLandingBtn) {
+      viewLandingBtn.className = 'px-3 py-1 rounded text-zinc-400 hover:text-white transition-all';
     }
 
     document.querySelectorAll('.sidebar-nav-item').forEach(item => {
@@ -98,13 +127,15 @@ function showView(view) {
       else item.classList.remove('active');
     });
   } else if (view === 'landing') {
-    dashboardSection.classList.add('hidden');
-    landingSection.classList.remove('hidden');
-    topbarTitle.innerText = 'Product Showcase';
+    if (dashboardSection) dashboardSection.classList.add('hidden');
+    if (landingSection) landingSection.classList.remove('hidden');
+    if (topbarTitle) topbarTitle.innerText = 'Product Showcase';
 
     if (viewLandingBtn) {
-      viewLandingBtn.className = 'px-3.5 py-1 rounded-full bg-white/10 text-white font-semibold transition-all shadow-sm';
-      viewDashboardBtn.className = 'px-3.5 py-1 rounded-full text-zinc-400 hover:text-white transition-all';
+      viewLandingBtn.className = 'px-3 py-1 rounded bg-[#242424] text-white font-semibold transition-all';
+    }
+    if (viewDashboardBtn) {
+      viewDashboardBtn.className = 'px-3 py-1 rounded text-zinc-400 hover:text-white transition-all';
     }
 
     document.querySelectorAll('.sidebar-nav-item').forEach(item => {
@@ -130,7 +161,8 @@ document.querySelectorAll('.sidebar-sub-item').forEach(sub => {
   sub.addEventListener('click', () => {
     document.querySelectorAll('.sidebar-sub-item').forEach(s => s.classList.remove('active'));
     sub.classList.add('active');
-    showView('dashboard');
+    const nav = sub.getAttribute('data-nav') || 'dashboard';
+    showView(nav);
   });
 });
 
@@ -149,7 +181,214 @@ if (mobileMenuBtn) {
   });
 }
 
-// 2. Control Plane Telemetry Polling (/api/health)
+// 2. Authentication Management
+async function checkAuthSession() {
+  try {
+    const res = await fetch('/api/auth/me');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.authenticated && data.user) {
+      currentUser = data.user;
+      renderAuthenticatedUser(data.user);
+    } else {
+      currentUser = null;
+      renderUnauthenticatedUser();
+    }
+  } catch (e) {
+    console.error("Auth check failed:", e);
+    renderUnauthenticatedUser();
+  }
+}
+
+function renderAuthenticatedUser(user) {
+  if (unauthControls) unauthControls.classList.add('hidden');
+  if (authProfileCapsule) authProfileCapsule.classList.remove('hidden');
+  if (userNameLabel) userNameLabel.innerText = user.name || 'Analyst';
+  if (dropdownUserEmail) dropdownUserEmail.innerText = user.email || '';
+  if (userAvatarImg) {
+    userAvatarImg.src = user.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user.name || 'Analyst')}`;
+  }
+}
+
+function renderUnauthenticatedUser() {
+  if (unauthControls) unauthControls.classList.remove('hidden');
+  if (authProfileCapsule) authProfileCapsule.classList.add('hidden');
+  if (userDropdownMenu) userDropdownMenu.classList.add('hidden');
+}
+
+function showAuthModal() {
+  if (authModal) authModal.classList.remove('hidden');
+}
+
+function hideAuthModal() {
+  if (authModal) authModal.classList.add('hidden');
+}
+
+if (openSignInBtn) openSignInBtn.addEventListener('click', showAuthModal);
+if (openSignUpBtn) openSignUpBtn.addEventListener('click', showAuthModal);
+if (ctaSignInBtn) ctaSignInBtn.addEventListener('click', showAuthModal);
+if (closeAuthModalBtn) closeAuthModalBtn.addEventListener('click', hideAuthModal);
+if (authModal) {
+  authModal.addEventListener('click', (e) => {
+    if (e.target === authModal) hideAuthModal();
+  });
+}
+
+// User Profile dropdown toggle
+if (userProfileBtn) {
+  userProfileBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (userDropdownMenu) userDropdownMenu.classList.toggle('hidden');
+  });
+}
+
+document.addEventListener('click', (e) => {
+  if (userDropdownMenu && !userDropdownMenu.contains(e.target) && e.target !== userProfileBtn) {
+    userDropdownMenu.classList.add('hidden');
+  }
+});
+
+// Demo Login for Evaluators & Judges
+if (demoLoginBtn) {
+  demoLoginBtn.addEventListener('click', async () => {
+    try {
+      demoLoginBtn.disabled = true;
+      demoLoginBtn.innerText = "Signing in...";
+      const res = await fetch('/api/auth/demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: "SecOps Lead Analyst", email: "analyst@phishchips.internal" })
+      });
+      const data = await res.json();
+      if (res.ok && data.authenticated) {
+        currentUser = data.user;
+        renderAuthenticatedUser(data.user);
+        hideAuthModal();
+      } else {
+        alert("Demo login failed: " + (data.detail || "Unknown error"));
+      }
+    } catch (err) {
+      alert("Demo login error: " + err.message);
+    } finally {
+      demoLoginBtn.disabled = false;
+      demoLoginBtn.innerHTML = `<span>⚡</span><span>Continue as Guest Analyst (Demo Mode)</span>`;
+    }
+  });
+}
+
+// Sign Out
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      currentUser = null;
+      renderUnauthenticatedUser();
+    } catch (e) {
+      console.error("Logout error:", e);
+    }
+  });
+}
+
+// Google Identity Services (GIS) Callback
+window.handleGoogleCredentialResponse = async function(response) {
+  try {
+    const res = await fetch('/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id_token: response.credential })
+    });
+    const data = await res.json();
+    if (res.ok && data.authenticated) {
+      currentUser = data.user;
+      renderAuthenticatedUser(data.user);
+      hideAuthModal();
+    } else {
+      alert(data.detail || "Google authentication failed.");
+    }
+  } catch (err) {
+    console.error("Google login error:", err);
+    alert("Google sign in error: " + err.message);
+  }
+};
+
+function initGoogleAuth() {
+  if (window.google && window.google.accounts && window.google.accounts.id) {
+    try {
+      window.google.accounts.id.initialize({
+        client_id: "273819837492-placeholder.apps.googleusercontent.com",
+        callback: window.handleGoogleCredentialResponse,
+        auto_select: false
+      });
+      const gTarget = document.getElementById('g_id_signin');
+      if (gTarget) {
+        window.google.accounts.id.renderButton(gTarget, {
+          theme: 'filled_black',
+          size: 'large',
+          text: 'continue_with',
+          width: 320
+        });
+      }
+    } catch (err) {
+      console.warn("GIS initialization notice:", err);
+    }
+  }
+}
+
+if (googleSignInBtn) {
+  googleSignInBtn.addEventListener('click', () => {
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+      window.google.accounts.id.prompt();
+    } else {
+      alert("Google Identity Services is initializing. You can also click 'Continue as Guest Analyst' for instant 1-click evaluation!");
+    }
+  });
+}
+
+// Menu Nav buttons
+if (menuDashboardBtn) {
+  menuDashboardBtn.addEventListener('click', () => {
+    if (userDropdownMenu) userDropdownMenu.classList.add('hidden');
+    showView('dashboard');
+  });
+}
+
+if (menuHistoryBtn) {
+  menuHistoryBtn.addEventListener('click', async () => {
+    if (userDropdownMenu) userDropdownMenu.classList.add('hidden');
+    await loadUserScans();
+  });
+}
+
+// 3. Hero Quick Scan Integration
+if (heroDetonateBtn && heroTargetUrl) {
+  heroDetonateBtn.addEventListener('click', () => {
+    const url = heroTargetUrl.value.trim();
+    if (!url) return;
+    targetUrlInput.value = url;
+    showView('dashboard');
+    scanForm.dispatchEvent(new Event('submit', { cancelable: true }));
+  });
+
+  heroTargetUrl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      heroDetonateBtn.click();
+    }
+  });
+}
+
+document.querySelectorAll('.hero-preset').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const url = btn.getAttribute('data-url');
+    if (url) {
+      targetUrlInput.value = url;
+      showView('dashboard');
+      scanForm.dispatchEvent(new Event('submit', { cancelable: true }));
+    }
+  });
+});
+
+// 4. Control Plane Telemetry Polling (/api/health)
 async function fetchControlPlaneHealth() {
   try {
     const res = await fetch('/api/health');
@@ -166,22 +405,115 @@ async function fetchControlPlaneHealth() {
 fetchControlPlaneHealth();
 setInterval(fetchControlPlaneHealth, 5000);
 
+// 5. Dynamic Recent Activity from Database (/api/scans/recent)
+async function loadRecentScans(filter = '') {
+  try {
+    const res = await fetch('/api/scans/recent');
+    if (!res.ok) return;
+    const data = await res.json();
+    renderActivityTable(data.scans || [], filter);
+  } catch (err) {
+    console.error("Recent scans load error:", err);
+  }
+}
+
+async function loadUserScans() {
+  try {
+    const res = await fetch('/api/user/scans');
+    if (!res.ok) return;
+    const data = await res.json();
+    renderActivityTable(data.scans || []);
+    showView('dashboard');
+    const tableSec = document.getElementById('recentActivitySection');
+    if (tableSec) tableSec.scrollIntoView({ behavior: 'smooth' });
+  } catch (err) {
+    console.error("User scans load error:", err);
+  }
+}
+
+function renderActivityTable(scans, filter = '') {
+  if (!activityTableBody) return;
+  activityTableBody.innerHTML = '';
+
+  const filtered = scans.filter(s => {
+    if (!filter) return true;
+    return (s.target_url && s.target_url.toLowerCase().includes(filter)) ||
+           (s.verdict && s.verdict.toLowerCase().includes(filter)) ||
+           (s.pretending_to_be && s.pretending_to_be.toLowerCase().includes(filter));
+  });
+
+  if (filtered.length === 0) {
+    activityTableBody.innerHTML = `
+      <tr>
+        <td colspan="7" class="text-center py-6 text-zinc-500 font-mono text-xs">
+          No detonation records found. Detonate a URL above to populate forensic logs.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  filtered.forEach(s => {
+    const tr = document.createElement('tr');
+    tr.className = 'cursor-pointer hover:bg-[#161616] transition-colors';
+    tr.setAttribute('data-url', s.target_url);
+
+    const verdict = (s.verdict || 'SUSPICIOUS').toUpperCase();
+    let statusBadge = '<span class="md-chip md-chip-success">COMPLETED</span>';
+    if (verdict === 'SCAM') {
+      statusBadge = '<span class="md-chip md-chip-error">SCAM DETECTED</span>';
+    } else if (verdict === 'SUSPICIOUS') {
+      statusBadge = '<span class="md-chip md-chip-warning">SUSPICIOUS</span>';
+    }
+
+    let timeStr = 'Just now';
+    if (s.created_at) {
+      try {
+        const d = new Date(s.created_at);
+        timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } catch (e) {}
+    }
+
+    const conf = s.confidence ? `${Math.round(s.confidence * 100)}%` : '90%';
+    const threatType = (s.asks_for && s.asks_for.length > 0) ? 'Credential Harvester' : 'Caged Detonation';
+    const brand = s.pretending_to_be || 'Generic';
+
+    tr.innerHTML = `
+      <td class="text-zinc-400">${timeStr}</td>
+      <td class="font-bold truncate max-w-[200px] ${verdict === 'SCAM' ? 'text-red-400' : 'text-zinc-200'}">${s.target_url}</td>
+      <td>${threatType}</td>
+      <td>phishnet Caged</td>
+      <td class="${verdict === 'SCAM' ? 'text-red-400' : 'text-emerald-400'}">${conf}</td>
+      <td>${brand}</td>
+      <td>${statusBadge}</td>
+    `;
+
+    tr.addEventListener('click', () => {
+      targetUrlInput.value = s.target_url;
+      showView('dashboard');
+    });
+
+    activityTableBody.appendChild(tr);
+  });
+}
+
+if (refreshScansBtn) {
+  refreshScansBtn.addEventListener('click', () => {
+    loadRecentScans(searchScansInput ? searchScansInput.value.toLowerCase().trim() : '');
+  });
+}
+
+if (searchScansInput) {
+  searchScansInput.addEventListener('input', (e) => {
+    loadRecentScans(e.target.value.toLowerCase().trim());
+  });
+}
+
 // Presets Click Listeners
 document.querySelectorAll('.preset-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     targetUrlInput.value = btn.getAttribute('data-url');
     showView('dashboard');
-  });
-});
-
-// Activity Table Rows Click Handlers
-document.querySelectorAll('#activityTableBody tr').forEach(row => {
-  row.addEventListener('click', () => {
-    const url = row.getAttribute('data-url');
-    if (url) {
-      targetUrlInput.value = url;
-      scanForm.dispatchEvent(new Event('submit', { cancelable: true }));
-    }
   });
 });
 
@@ -204,10 +536,10 @@ zoomModal.addEventListener('click', (e) => {
 document.querySelectorAll('.lang-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.lang-btn').forEach(b => {
-      b.classList.remove('text-amber-400', 'font-bold', 'bg-zinc-800');
+      b.classList.remove('text-[#f59e0b]', 'font-bold', 'bg-[#242424]');
       b.classList.add('text-zinc-400');
     });
-    btn.classList.add('text-amber-400', 'font-bold', 'bg-zinc-800');
+    btn.classList.add('text-[#f59e0b]', 'font-bold', 'bg-[#242424]');
     btn.classList.remove('text-zinc-400');
     currentLanguage = btn.getAttribute('data-lang');
     if (currentVerdictData) {
@@ -216,7 +548,7 @@ document.querySelectorAll('.lang-btn').forEach(btn => {
   });
 });
 
-// 3. Scan Submission & SSE Streaming
+// 6. Scan Submission & SSE Streaming
 scanForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const url = targetUrlInput.value.trim();
@@ -226,6 +558,9 @@ scanForm.addEventListener('submit', async (e) => {
     eventSource.close();
     eventSource = null;
   }
+
+  // Ensure dashboard view is active
+  showView('dashboard');
 
   // Reset UI State for Detonation
   submitBtn.disabled = true;
@@ -369,7 +704,7 @@ function getBadgeLabel(stage) {
   }
 }
 
-// 4. Pattern B Approval Event Handlers
+// 7. Pattern B Approval Event Handlers
 approveBtn.addEventListener('click', async () => {
   if (!currentJobId) return;
   approveBtn.disabled = true;
@@ -406,7 +741,7 @@ async function checkJobStatusFallback(jobId) {
   } catch (err) {}
 }
 
-// 5. Job Completion & Verdict Display
+// 8. Job Completion & Verdict Display
 function handleJobCompletion(job) {
   if (eventSource) {
     eventSource.close();
@@ -426,7 +761,8 @@ function handleJobCompletion(job) {
   if (job.result) {
     currentVerdictData = job.result;
     renderVerdict(job.result);
-    prependActivityRow(job);
+    // Reload recent scans from SQLite
+    loadRecentScans(searchScansInput ? searchScansInput.value.toLowerCase().trim() : '');
   }
 
   fetchControlPlaneHealth();
@@ -499,38 +835,16 @@ function renderVerdict(result) {
   verdictCard.classList.remove('hidden');
 }
 
-// Add newly finished scan to recent activity table
-function prependActivityRow(job) {
-  if (!activityTableBody || !job.result) return;
+// 9. Initial Page Load Execution
+document.addEventListener('DOMContentLoaded', () => {
+  checkAuthSession();
+  loadRecentScans();
+  initGoogleAuth();
+});
 
-  const tr = document.createElement('tr');
-  tr.className = 'cursor-pointer hover:bg-[#161616] transition-colors';
-  tr.setAttribute('data-url', job.target_url);
-
-  const verdict = (job.result.verdict || 'SUSPICIOUS').toUpperCase();
-  let statusBadge = '<span class="md-chip md-chip-success">COMPLETED</span>';
-  if (verdict === 'SCAM') {
-    statusBadge = '<span class="md-chip md-chip-error">SCAM DETECTED</span>';
-  } else if (verdict === 'SUSPICIOUS') {
-    statusBadge = '<span class="md-chip md-chip-warning">SUSPICIOUS</span>';
-  }
-
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-  tr.innerHTML = `
-    <td class="text-zinc-400">${timeStr}</td>
-    <td class="font-bold truncate max-w-[200px] ${verdict === 'SCAM' ? 'text-red-400' : 'text-zinc-200'}">${job.target_url}</td>
-    <td>${job.result.asks_for && job.result.asks_for.length > 0 ? 'Credential Harvester' : 'General Detonation'}</td>
-    <td>phishnet Caged</td>
-    <td class="${verdict === 'SCAM' ? 'text-red-400' : 'text-emerald-400'}">${Math.round((job.result.confidence || 0.9) * 100)}%</td>
-    <td>${job.result.pretending_to_be || 'Generic'}</td>
-    <td>${statusBadge}</td>
-  `;
-
-  tr.addEventListener('click', () => {
-    targetUrlInput.value = job.target_url;
-  });
-
-  activityTableBody.insertBefore(tr, activityTableBody.firstChild);
+// Run immediate initialization if DOM is already ready
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  checkAuthSession();
+  loadRecentScans();
+  initGoogleAuth();
 }
