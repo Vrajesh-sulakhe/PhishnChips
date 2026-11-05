@@ -1,4 +1,4 @@
-// app.js - Luxury Bento Dashboard Controller & Real-Time Orchestrator for Phish&Chips
+// app.js - High-End Monera-Style Controller & Real-Time Orchestrator for Phish&Chips
 
 let currentJobId = null;
 let eventSource = null;
@@ -18,21 +18,15 @@ const shotCountSpan = document.getElementById('shotCount');
 const approvalModal = document.getElementById('approvalModal');
 const approveBtn = document.getElementById('approveBtn');
 const denyBtn = document.getElementById('denyBtn');
-const pipelineStatusText = document.getElementById('pipelineStatusText');
 const sseIndicator = document.getElementById('sseIndicator');
-const clearWorkspaceBtn = document.getElementById('clearWorkspaceBtn');
-const quickSbiBtn = document.getElementById('quickSbiBtn');
-const inspectPhishnetBtn = document.getElementById('inspectPhishnetBtn');
-const viewPerimeterBtn = document.getElementById('viewPerimeterBtn');
-const refreshHealthBtn = document.getElementById('refreshHealthBtn');
+const topbarTitle = document.getElementById('topbarTitle');
 
-// Pipeline Timeline Nodes (6 nodes along the timeline ruler)
-const nodeUser = document.getElementById('nodeUser');
-const nodeHost = document.getElementById('nodeHost');
-const nodeSandbox = document.getElementById('nodeSandbox');
-const nodeInspector = document.getElementById('nodeInspector');
-const nodeInference = document.getElementById('nodeInference');
-const nodeDone = document.getElementById('nodeDone');
+// View Switchers
+const dashboardSection = document.getElementById('dashboardSection');
+const landingSection = document.getElementById('landingSection');
+const viewDashboardBtn = document.getElementById('viewDashboardBtn');
+const viewLandingBtn = document.getElementById('viewLandingBtn');
+const ctaLaunchBtn = document.getElementById('ctaLaunchBtn');
 
 // Verdict Card Elements
 const verdictCard = document.getElementById('verdictCard');
@@ -54,6 +48,7 @@ const closeModalBtn = document.getElementById('closeModalBtn');
 
 // Control Plane Telemetry Elements
 const slotsBadge = document.getElementById('slotsBadge');
+const activityTableBody = document.getElementById('activityTableBody');
 
 // Translations Catalog
 const LOCALIZATIONS = {
@@ -61,7 +56,7 @@ const LOCALIZATIONS = {
     safe: "SAFE",
     suspicious: "SUSPICIOUS",
     scam: "SCAM DETECTED",
-    brandMismatch: "Brand Mismatch:",
+    brandMismatch: "Brand Impersonation:",
     escalationTitle: "Emergency Incident Escalation",
     escalationDesc: "If you or a family member entered passwords, UPI PINs, or OTPs on this site, take immediate defensive action:",
     noThreats: "No credential harvesting forms, deceptive branding, or unauthorized downloads detected."
@@ -86,14 +81,82 @@ const LOCALIZATIONS = {
   }
 };
 
-// 1. Dynamic Control Plane Telemetry Polling (/api/health)
+// 1. Navigation & View Switcher (Dashboard vs Landing Page)
+function showView(view) {
+  if (view === 'dashboard') {
+    dashboardSection.classList.remove('hidden');
+    landingSection.classList.add('hidden');
+    topbarTitle.innerText = 'Overview';
+
+    if (viewDashboardBtn) {
+      viewDashboardBtn.className = 'px-3.5 py-1 rounded-full bg-white/10 text-white font-semibold transition-all shadow-sm';
+      viewLandingBtn.className = 'px-3.5 py-1 rounded-full text-zinc-400 hover:text-white transition-all';
+    }
+
+    document.querySelectorAll('.sidebar-nav-item').forEach(item => {
+      if (item.getAttribute('data-nav') === 'dashboard') item.classList.add('active');
+      else item.classList.remove('active');
+    });
+  } else if (view === 'landing') {
+    dashboardSection.classList.add('hidden');
+    landingSection.classList.remove('hidden');
+    topbarTitle.innerText = 'Product Showcase';
+
+    if (viewLandingBtn) {
+      viewLandingBtn.className = 'px-3.5 py-1 rounded-full bg-white/10 text-white font-semibold transition-all shadow-sm';
+      viewDashboardBtn.className = 'px-3.5 py-1 rounded-full text-zinc-400 hover:text-white transition-all';
+    }
+
+    document.querySelectorAll('.sidebar-nav-item').forEach(item => {
+      if (item.getAttribute('data-nav') === 'landing') item.classList.add('active');
+      else item.classList.remove('active');
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+if (viewDashboardBtn) viewDashboardBtn.addEventListener('click', () => showView('dashboard'));
+if (viewLandingBtn) viewLandingBtn.addEventListener('click', () => showView('landing'));
+if (ctaLaunchBtn) ctaLaunchBtn.addEventListener('click', () => showView('dashboard'));
+
+document.querySelectorAll('.sidebar-nav-item').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const nav = btn.getAttribute('data-nav');
+    if (nav) showView(nav);
+  });
+});
+
+document.querySelectorAll('.sidebar-sub-item').forEach(sub => {
+  sub.addEventListener('click', () => {
+    document.querySelectorAll('.sidebar-sub-item').forEach(s => s.classList.remove('active'));
+    sub.classList.add('active');
+    showView('dashboard');
+  });
+});
+
+// Mobile Sidebar Toggle
+const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+if (mobileMenuBtn) {
+  mobileMenuBtn.addEventListener('click', () => {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+      sidebar.classList.toggle('hidden');
+      sidebar.classList.toggle('fixed');
+      sidebar.classList.toggle('z-50');
+      sidebar.classList.toggle('inset-y-0');
+      sidebar.classList.toggle('left-0');
+    }
+  });
+}
+
+// 2. Control Plane Telemetry Polling (/api/health)
 async function fetchControlPlaneHealth() {
   try {
     const res = await fetch('/api/health');
     if (!res.ok) return;
     const data = await res.json();
     if (slotsBadge) {
-      slotsBadge.innerText = data.slots_display || `${data.active_sandboxes || 0} / ${data.max_sandboxes || 3} Allocated`;
+      slotsBadge.innerText = `${data.active_sandboxes || 0} / ${data.max_sandboxes || 3} Active`;
     }
   } catch (err) {
     console.error("Health check error:", err);
@@ -103,69 +166,24 @@ async function fetchControlPlaneHealth() {
 fetchControlPlaneHealth();
 setInterval(fetchControlPlaneHealth, 5000);
 
-if (refreshHealthBtn) {
-  refreshHealthBtn.addEventListener('click', () => {
-    fetchControlPlaneHealth();
-  });
-}
-
-// Nav Tab Click Handlers
-document.querySelectorAll('.nav-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('nav-tab-active'));
-    tab.classList.add('nav-tab-active');
-  });
-});
-
-// Quick Action Buttons
-if (quickSbiBtn) {
-  quickSbiBtn.addEventListener('click', () => {
-    targetUrlInput.value = 'demo://fake-bank';
-    scanForm.dispatchEvent(new Event('submit', { cancelable: true }));
-  });
-}
-
-function scrollToPerimeter() {
-  const visCard = document.querySelector('.visualizer-card');
-  if (visCard) {
-    visCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    visCard.classList.add('ring-2', 'ring-amber-400');
-    setTimeout(() => visCard.classList.remove('ring-2', 'ring-amber-400'), 1500);
-  }
-}
-
-if (inspectPhishnetBtn) inspectPhishnetBtn.addEventListener('click', scrollToPerimeter);
-if (viewPerimeterBtn) viewPerimeterBtn.addEventListener('click', scrollToPerimeter);
-
-// Preset Buttons
+// Presets Click Listeners
 document.querySelectorAll('.preset-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     targetUrlInput.value = btn.getAttribute('data-url');
+    showView('dashboard');
   });
 });
 
-// Reset Session
-if (clearWorkspaceBtn) {
-  clearWorkspaceBtn.addEventListener('click', () => {
-    if (eventSource) {
-      eventSource.close();
-      eventSource = null;
+// Activity Table Rows Click Handlers
+document.querySelectorAll('#activityTableBody tr').forEach(row => {
+  row.addEventListener('click', () => {
+    const url = row.getAttribute('data-url');
+    if (url) {
+      targetUrlInput.value = url;
+      scanForm.dispatchEvent(new Event('submit', { cancelable: true }));
     }
-    targetUrlInput.value = '';
-    detonationWorkspace.classList.add('hidden');
-    verdictCard.classList.add('hidden');
-    approvalModal.classList.add('hidden');
-    resetPipelineNodes();
-    pipelineStatusText.innerText = 'Real-Time Orchestration Pipeline';
-    terminalLog.innerHTML = '<div class="terminal-line text-zinc-600 font-mono">Waiting for sandbox detonation...</div>';
-    primaryShot.src = '';
-    shotCountSpan.innerText = '0 captures';
-    totalEventCount = 0;
-    eventCountSpan.innerText = '0 events';
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = `<span>Detonate in Sandbox</span> <span>⚡</span>`;
   });
-}
+});
 
 // Image Zoom Modal Listeners
 if (primaryShot) {
@@ -198,7 +216,7 @@ document.querySelectorAll('.lang-btn').forEach(btn => {
   });
 });
 
-// 2. Scan Submission & SSE Connection
+// 3. Scan Submission & SSE Streaming
 scanForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const url = targetUrlInput.value.trim();
@@ -221,11 +239,8 @@ scanForm.addEventListener('submit', async (e) => {
   totalEventCount = 0;
   eventCountSpan.innerText = '0 events';
 
-  // Animate Pipeline Start
-  resetPipelineNodes();
-  setNodeState(nodeUser, 'completed');
-  setNodeState(nodeHost, 'active');
-  pipelineStatusText.innerText = 'DISPATCHING TO EPHEMERAL DETONATION CHAMBER...';
+  // Smooth scroll to workspace
+  detonationWorkspace.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
   try {
     const res = await fetch('/api/scan', {
@@ -249,11 +264,10 @@ scanForm.addEventListener('submit', async (e) => {
     alert(`Detonation error: ${err.message}`);
     submitBtn.disabled = false;
     submitBtn.innerHTML = `<span>Detonate in Sandbox</span> <span>⚡</span>`;
-    resetPipelineNodes();
   }
 });
 
-// 3. Server-Sent Events (SSE) Listener
+// Connect to Server-Sent Events (SSE) Stream
 function connectSSEStream(jobId) {
   eventSource = new EventSource(`/api/scan/${jobId}/stream`);
 
@@ -277,17 +291,15 @@ function connectSSEStream(jobId) {
   };
 
   eventSource.onerror = () => {
-    // Fallback poll check if SSE disconnects prematurely
     checkJobStatusFallback(jobId);
   };
 }
 
-// Render Incoming Stream Event
+// Render Incoming SSE Event to Terminal
 function handleStreamEvent(ev) {
   totalEventCount++;
   eventCountSpan.innerText = `${totalEventCount} event(s)`;
 
-  // Create terminal line
   const line = document.createElement('div');
   line.className = 'terminal-line';
 
@@ -317,8 +329,12 @@ function handleStreamEvent(ev) {
   terminalLog.appendChild(line);
   terminalLog.scrollTop = terminalLog.scrollHeight;
 
-  // Update Pipeline State Machine
-  updatePipelineNodes(ev.stage, ev.message);
+  // Pattern B Human-in-the-Loop check
+  if (ev.stage === 'AWAITING_APPROVAL') {
+    approvalModal.classList.remove('hidden');
+  } else if (ev.stage === 'P2_INIT') {
+    approvalModal.classList.add('hidden');
+  }
 }
 
 function getBadgeClass(stage) {
@@ -353,57 +369,7 @@ function getBadgeLabel(stage) {
   }
 }
 
-// 4. Pipeline Timeline Animation Updates
-function setNodeState(node, state) {
-  if (!node) return;
-  node.classList.remove('active', 'completed', 'warning');
-  if (state) node.classList.add(state);
-}
-
-function updatePipelineNodes(stage, message) {
-  if (stage === 'SANDBOX_INIT') {
-    setNodeState(nodeHost, 'completed');
-    setNodeState(nodeSandbox, 'active');
-    pipelineStatusText.innerText = 'CAGED CONTAINER SPAWNED (phishnet 172.30.0.0/16)...';
-  } else if (stage === 'CAP_DROP') {
-    setNodeState(nodeSandbox, 'completed');
-    setNodeState(nodeInspector, 'active');
-  } else if (stage === 'NAVIGATING') {
-    setNodeState(nodeInspector, 'active');
-    pipelineStatusText.innerText = 'HEADLESS CHROMIUM NAVIGATING TARGET LINK...';
-  } else if (stage === 'INTERCEPT') {
-    setNodeState(nodeInspector, 'warning');
-    pipelineStatusText.innerText = '⚠️ CONTAINMENT TRIGGERED: UNTRUSTED SSRF/DOWNLOAD BLOCKED';
-  } else if (stage === 'EVIDENCE_COLLECTED') {
-    setNodeState(nodeInspector, 'completed');
-  } else if (stage === 'AWAITING_APPROVAL') {
-    setNodeState(nodeInspector, 'warning');
-    approvalModal.classList.remove('hidden');
-    pipelineStatusText.innerText = 'PAUSED: AWAITING HUMAN AUTHORIZATION (PATTERN B)';
-  } else if (stage === 'P2_INIT') {
-    approvalModal.classList.add('hidden');
-    setNodeState(nodeInspector, 'active');
-    pipelineStatusText.innerText = 'INJECTING DECOY CANARY VALUES IN SANDBOX PASS...';
-  } else if (stage === 'INFERENCE_DISPATCH') {
-    setNodeState(nodeInspector, 'completed');
-    setNodeState(nodeInference, 'active');
-    pipelineStatusText.innerText = 'DISPATCHING FORENSICS TO VULTR SERVERLESS INFERENCE...';
-  } else if (stage === 'DONE') {
-    setNodeState(nodeInference, 'completed');
-    setNodeState(nodeDone, 'completed');
-    pipelineStatusText.innerText = '🍟 PHISH FRIED. SANDBOX DESTROYED & PURGED.';
-  }
-}
-
-function resetPipelineNodes() {
-  [nodeUser, nodeHost, nodeSandbox, nodeInspector, nodeInference, nodeDone].forEach(node => {
-    if (node) {
-      node.classList.remove('active', 'completed', 'warning');
-    }
-  });
-}
-
-// 5. Pattern B Approval Event Handlers
+// 4. Pattern B Approval Event Handlers
 approveBtn.addEventListener('click', async () => {
   if (!currentJobId) return;
   approveBtn.disabled = true;
@@ -440,7 +406,7 @@ async function checkJobStatusFallback(jobId) {
   } catch (err) {}
 }
 
-// 6. Job Completion & Verdict Display
+// 5. Job Completion & Verdict Display
 function handleJobCompletion(job) {
   if (eventSource) {
     eventSource.close();
@@ -460,6 +426,7 @@ function handleJobCompletion(job) {
   if (job.result) {
     currentVerdictData = job.result;
     renderVerdict(job.result);
+    prependActivityRow(job);
   }
 
   fetchControlPlaneHealth();
@@ -530,4 +497,40 @@ function renderVerdict(result) {
   if (escDesc) escDesc.innerText = loc.escalationDesc;
 
   verdictCard.classList.remove('hidden');
+}
+
+// Add newly finished scan to recent activity table
+function prependActivityRow(job) {
+  if (!activityTableBody || !job.result) return;
+
+  const tr = document.createElement('tr');
+  tr.className = 'cursor-pointer hover:bg-white/5 transition-colors';
+  tr.setAttribute('data-url', job.target_url);
+
+  const verdict = (job.result.verdict || 'SUSPICIOUS').toUpperCase();
+  let statusBadge = '<span class="badge-status-completed">SAFE</span>';
+  if (verdict === 'SCAM') {
+    statusBadge = '<span class="badge-status-blocked">SCAM DETECTED</span>';
+  } else if (verdict === 'SUSPICIOUS') {
+    statusBadge = '<span class="badge-status-scheduled">SUSPICIOUS</span>';
+  }
+
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  tr.innerHTML = `
+    <td class="text-zinc-400">${timeStr}</td>
+    <td class="font-bold truncate max-w-[200px] ${verdict === 'SCAM' ? 'text-red-400' : 'text-zinc-200'}">${job.target_url}</td>
+    <td>${job.result.asks_for && job.result.asks_for.length > 0 ? 'Credential Harvester' : 'General Detonation'}</td>
+    <td>phishnet Caged</td>
+    <td class="${verdict === 'SCAM' ? 'text-red-400' : 'text-emerald-400'}">${Math.round((job.result.confidence || 0.9) * 100)}%</td>
+    <td>${job.result.pretending_to_be || 'Generic'}</td>
+    <td>${statusBadge}</td>
+  `;
+
+  tr.addEventListener('click', () => {
+    targetUrlInput.value = job.target_url;
+  });
+
+  activityTableBody.insertBefore(tr, activityTableBody.firstChild);
 }
