@@ -297,3 +297,4 @@ function setStepCompleted(id) {
   const el = document.getElementById(id);
   if (el) el.className = 'stepper-item completed';
 }
+

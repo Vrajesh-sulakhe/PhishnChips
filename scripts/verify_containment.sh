@@ -67,3 +67,4 @@ else
     echo "❌ CONTAINMENT CHECKS FAILED: ${FAILED_CHECKS} check(s) violated isolation."
     exit 1
 fi
+

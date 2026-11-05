@@ -215,3 +215,4 @@ EVIDENCE COLLECTED FROM SANDBOX DETONATION:
 
     # Fallback if model call or parsing fails
     return merge_verdicts(None, heuristics_result)
+

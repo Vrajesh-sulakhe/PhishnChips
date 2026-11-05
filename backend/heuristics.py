@@ -227,3 +227,4 @@ def evaluate_heuristics(result_data: Dict[str, Any]) -> Dict[str, Any]:
         "reasons": reasons[:3],
         "indicators": indicators
     }
+

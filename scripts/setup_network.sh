@@ -53,3 +53,4 @@ else
 fi
 
 echo "==> [Network Setup] phishnet isolation successfully verified and armed."
+

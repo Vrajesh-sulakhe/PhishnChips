@@ -38,3 +38,4 @@ def clear_job_events(job_id: str):
     """Purges events for a given job ID after retention expires."""
     with _lock:
         _job_events.pop(job_id, None)
+
