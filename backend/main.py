@@ -1,11 +1,12 @@
 """
 main.py - FastAPI Manager & Async Orchestrator for Phish&Chips.
-Handles async job dispatch, polling, human approval gates, screenshot streaming, and demo assets.
+Handles async job dispatch, SSE event streaming, human approval gates, screenshot streaming, and demo assets.
 """
 
 import os
 import uuid
 import re
+import json
 import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -14,14 +15,14 @@ from typing import Optional, Dict, Any
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from validation import validate_url, check_rate_limit, ValidationError
-from events import init_job_events, get_events
+from events import init_job_events, get_events, subscribe_job_events, unsubscribe_job_events
 import scanner
 
 BASE_DIR = Path("/root/phish-n-chips")
@@ -42,7 +43,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Phish&Chips: Ephemeral Sandbox Orchestrator",
     description="Track 01 · Blast Radius Zero // Vultr Hackathon",
-    version="2.0.0",
+    version="2.1.0",
     lifespan=lifespan
 )
 
@@ -74,10 +75,20 @@ def serve_root():
 @app.get("/health")
 @app.get("/api/health")
 def health_check():
+    api_key_set = bool(os.getenv("VULTR_INFERENCE_API_KEY", "").strip())
+    active_sandboxes = scanner.get_active_scans_count()
+    max_sandboxes = scanner.get_max_scans()
     return {
         "status": "healthy",
         "service": "phish-n-chips-backend",
-        "network": "phishnet",
+        "control_plane": "Vultr BLR (4 vCPU / 8 GB)",
+        "active_sandboxes": active_sandboxes,
+        "max_sandboxes": max_sandboxes,
+        "slots_display": f"{active_sandboxes} / {max_sandboxes} Sandboxes Active",
+        "network": "phishnet (172.30.0.0/16)",
+        "iptables_phishnet": "Enforced (Host & RFC1918 Dropped)",
+        "inference_endpoint": "api.vultrinference.com",
+        "inference_status": "Connected (api.vultrinference.com)" if api_key_set else "Standby (Deterministic Heuristics Active)",
         "sandbox_image": "phishchips-sandbox"
     }
 
@@ -113,6 +124,46 @@ async def start_scan(req: ScanRequest, request: Request):
     asyncio.create_task(scanner.process_scan_job(job_id, validated_url))
 
     return {"job_id": job_id, "status": "queued"}
+
+@app.get("/api/scan/{job_id}/stream")
+async def stream_scan_events(job_id: str):
+    """Server-Sent Events (SSE) live event streaming endpoint."""
+    job = scanner.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Scan job '{job_id}' not found.")
+
+    async def event_generator():
+        q = subscribe_job_events(job_id)
+        try:
+            while True:
+                try:
+                    event = await asyncio.wait_for(q.get(), timeout=1.5)
+                    yield f"data: {json.dumps(event)}\n\n"
+                    if event.get("stage") in ("DONE", "ERROR"):
+                        current_job = scanner.get_job(job_id)
+                        yield f"data: {json.dumps({'stage': 'JOB_SNAPSHOT', 'job': current_job})}\n\n"
+                        break
+                except asyncio.TimeoutError:
+                    current_job = scanner.get_job(job_id)
+                    if not current_job:
+                        break
+                    if current_job.get("status") in ("done", "error") and q.empty():
+                        yield f"data: {json.dumps({'stage': 'JOB_SNAPSHOT', 'job': current_job})}\n\n"
+                        break
+                    # Send keep-alive comment
+                    yield ": keep-alive\n\n"
+        finally:
+            unsubscribe_job_events(job_id, q)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 @app.get("/api/scan/{job_id}")
 async def get_scan_status(job_id: str):

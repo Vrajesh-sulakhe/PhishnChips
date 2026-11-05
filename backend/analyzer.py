@@ -9,12 +9,18 @@ import base64
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from openai import OpenAI
+from dotenv import load_dotenv
 
 from heuristics import evaluate_heuristics
 
-VULTR_INFERENCE_API_KEY = os.getenv("VULTR_INFERENCE_API_KEY", "").strip()
-VULTR_INFERENCE_BASE_URL = os.getenv("VULTR_INFERENCE_BASE_URL", "https://api.vultrinference.com/v1").strip()
-VULTR_MODEL = os.getenv("VULTR_MODEL", "llama2-13b-chat").strip()
+load_dotenv()
+
+def get_vultr_config():
+    return {
+        "api_key": os.getenv("VULTR_INFERENCE_API_KEY", "").strip(),
+        "base_url": os.getenv("VULTR_INFERENCE_BASE_URL", "https://api.vultrinference.com/v1").strip(),
+        "model": os.getenv("VULTR_MODEL", "llama2-13b-chat").strip()
+    }
 
 def encode_image_base64(image_path: Path) -> Optional[str]:
     """Encodes an image file to a base64 data URI."""
@@ -45,7 +51,6 @@ def parse_model_json(raw_content: str) -> Optional[Dict[str, Any]]:
     try:
         return json.loads(cleaned)
     except Exception:
-        # Try extracting the first {...} block
         start = cleaned.find("{")
         end = cleaned.rfind("}")
         if start != -1 and end != -1 and end > start:
@@ -55,23 +60,40 @@ def parse_model_json(raw_content: str) -> Optional[Dict[str, Any]]:
                 pass
     return None
 
-def call_vultr_inference(messages: List[Dict[str, Any]], model_name: str) -> Optional[str]:
-    """Executes call to Vultr Serverless Inference."""
+def call_vultr_inference(messages: List[Dict[str, Any]], model_name: str, config: Dict[str, str]) -> Optional[str]:
+    """Executes call to Vultr Serverless Inference with response_format fallback."""
     client = OpenAI(
-        base_url=VULTR_INFERENCE_BASE_URL,
-        api_key=VULTR_INFERENCE_API_KEY,
-        timeout=25.0
+        base_url=config["base_url"],
+        api_key=config["api_key"],
+        timeout=30.0
     )
-    resp = client.chat.completions.create(
-        model=model_name,
-        messages=messages,
-        temperature=0.1
-    )
-    if resp.choices and resp.choices[0].message:
-        return resp.choices[0].message.content
+    # Attempt 1: with json_object format
+    try:
+        resp = client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            temperature=0.1,
+            response_format={"type": "json_object"}
+        )
+        if resp.choices and resp.choices[0].message:
+            return resp.choices[0].message.content
+    except Exception:
+        pass
+
+    # Attempt 2: standard format
+    try:
+        resp = client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            temperature=0.1
+        )
+        if resp.choices and resp.choices[0].message:
+            return resp.choices[0].message.content
+    except Exception as err:
+        print(f"Vultr inference error: {err}")
     return None
 
-def merge_verdicts(llm_data: Optional[Dict[str, Any]], heuristic_data: Dict[str, Any]) -> Dict[str, Any]:
+def merge_verdicts(llm_data: Optional[Dict[str, Any]], heuristic_data: Dict[str, Any], model_name: str) -> Dict[str, Any]:
     """
     Combines LLM threat analysis with deterministic code heuristics.
     Adheres to the safety principle: when in doubt, lean towards the more cautious verdict.
@@ -85,14 +107,13 @@ def merge_verdicts(llm_data: Optional[Dict[str, Any]], heuristic_data: Dict[str,
     heur_brand = heuristic_data.get("pretending_to_be")
 
     if not llm_data:
-        # Fallback to heuristics only
         return {
             "verdict": heur_verdict,
             "confidence": round(heur_score / 100.0, 2) if heur_score > 0 else 0.95,
             "pretending_to_be": heur_brand,
             "asks_for": heur_asks,
             "reasons": heur_reasons,
-            "threat_source": "Deterministic Containment Heuristics (LLM fallback)",
+            "threat_source": "Deterministic Containment Heuristics (LLM Fallback)",
             "indicators": heuristic_data.get("indicators", [])
         }
 
@@ -111,7 +132,6 @@ def merge_verdicts(llm_data: Optional[Dict[str, Any]], heuristic_data: Dict[str,
     else:
         final_verdict = raw_llm_verdict
 
-    # Combine reasons and asks_for
     combined_asks = list(dict.fromkeys(heur_asks + llm_asks))
     combined_reasons = list(dict.fromkeys(llm_reasons + heur_reasons))[:3]
     final_brand = heur_brand or llm_brand
@@ -122,7 +142,7 @@ def merge_verdicts(llm_data: Optional[Dict[str, Any]], heuristic_data: Dict[str,
         "pretending_to_be": final_brand,
         "asks_for": combined_asks,
         "reasons": combined_reasons if combined_reasons else ["Evaluated across DOM, network and brand boundaries."],
-        "threat_source": f"Vultr Serverless Inference ({VULTR_MODEL}) + Heuristics",
+        "threat_source": f"Vultr Serverless Inference ({model_name}) + Heuristics",
         "indicators": heuristic_data.get("indicators", [])
     }
 
@@ -131,14 +151,15 @@ async def analyze_threat(result_data: Dict[str, Any], job_dir: Path) -> Dict[str
     Main analysis pipeline:
     1. Runs deterministic code heuristics.
     2. Gathers visual screenshot evidence and DOM telemetry.
-    3. Queries Vultr Serverless Inference.
+    3. Queries Vultr Serverless Inference via OpenAI SDK.
     4. Combines results into final verdict.
     """
+    config = get_vultr_config()
     heuristics_result = evaluate_heuristics(result_data)
 
-    if not VULTR_INFERENCE_API_KEY:
-        print("VULTR_INFERENCE_API_KEY not set. Using deterministic heuristics engine.")
-        return merge_verdicts(None, heuristics_result)
+    if not config["api_key"]:
+        print("VULTR_INFERENCE_API_KEY not configured. Using deterministic heuristics engine.")
+        return merge_verdicts(None, heuristics_result, config["model"])
 
     # Prepare evidence summary
     target = result_data.get("url")
@@ -162,7 +183,7 @@ EVIDENCE COLLECTED FROM SANDBOX DETONATION:
 """
 
     system_prompt = (
-        "You are an expert phishing analyst for Phish&Chips. "
+        "You are an expert cybersecurity phishing detonation analyst for Phish&Chips. "
         "Analyze the provided sandboxed browser detonation evidence. "
         "Determine if this page is pretending to be a known brand, harvesting credentials, or conducting a scam. "
         "Reply with strictly valid JSON only matching this schema:\n"
@@ -191,13 +212,13 @@ EVIDENCE COLLECTED FROM SANDBOX DETONATION:
             }
         ]
         try:
-            raw_resp = call_vultr_inference(vision_messages, VULTR_MODEL)
+            raw_resp = call_vultr_inference(vision_messages, config["model"], config)
             if raw_resp:
                 parsed = parse_model_json(raw_resp)
                 if parsed:
-                    return merge_verdicts(parsed, heuristics_result)
+                    return merge_verdicts(parsed, heuristics_result, config["model"])
         except Exception as e:
-            print(f"Vision inference failed ({e}). Attempting text-only fallback...")
+            print(f"Vision inference failed ({e}). Attempting text fallback...")
 
     # Attempt 2: Text-only payload fallback
     text_messages = [
@@ -205,14 +226,13 @@ EVIDENCE COLLECTED FROM SANDBOX DETONATION:
         {"role": "user", "content": evidence_summary}
     ]
     try:
-        raw_resp = call_vultr_inference(text_messages, VULTR_MODEL)
+        raw_resp = call_vultr_inference(text_messages, config["model"], config)
         if raw_resp:
             parsed = parse_model_json(raw_resp)
             if parsed:
-                return merge_verdicts(parsed, heuristics_result)
+                return merge_verdicts(parsed, heuristics_result, config["model"])
     except Exception as e:
         print(f"Text inference failed: {e}")
 
-    # Fallback if model call or parsing fails
-    return merge_verdicts(None, heuristics_result)
-
+    # Fallback to heuristics if inference call fails
+    return merge_verdicts(None, heuristics_result, config["model"])

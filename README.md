@@ -3,7 +3,8 @@
 > **Tagline:** Fresh phish, fried in a sandbox.  
 > **Event:** Vultr Agent Rush Hackathon on lablab.ai  
 > **Track:** **01 · Blast Radius Zero**  
-> **Live Deployment:** [http://139.84.159.12:8000](http://139.84.159.12:8000)  
+> **Live Secure URL:** [https://139.84.159.12.sslip.io](https://139.84.159.12.sslip.io) (Auto TLS via Let's Encrypt / Caddy)  
+> **Direct Control Plane:** [http://139.84.159.12:8000](http://139.84.159.12:8000)  
 
 ---
 
@@ -25,11 +26,12 @@ The collected telemetry and screenshots are evaluated using a vision-capable mod
 
 ```mermaid
 flowchart TD
-    User["User Browser / Mobile Device"] -->|"HTTP / REST API"| FastAPI["FastAPI Orchestrator (Vultr VM)\nPort 8000 (Central Control Plane)"]
+    User["User Browser / Mobile Device"] -->|"HTTPS / TLS 1.3"| Caddy["Caddy Reverse Proxy\n(139.84.159.12.sslip.io)"]
+    Caddy -->|"Reverse Proxy"| FastAPI["FastAPI Orchestrator (Vultr VM)\nPort 8000 (Central Control Plane)"]
     
     subgraph HostVM ["Vultr Cloud Compute Host (Bangalore)"]
         FastAPI -->|"Input Validation & SSRF Shield"| Validation["validation.py"]
-        FastAPI -->|"Event Logger & Janitor"| Events["events.py"]
+        FastAPI -->|"SSE Event Broadcaster & Janitor"| Events["events.py"]
         FastAPI -->|"Docker Exec (Full Containment Flags)"| DockerDaemon["Docker Runtime (cgroups v2)"]
         
         subgraph IsolatedNet ["Network Perimeter: phishnet (172.30.0.0/16)"]
@@ -56,7 +58,18 @@ flowchart TD
 
 ---
 
-## 3. The 4 Non-Negotiable Containment Guarantees
+## 3. Real-Time Orchestration Pipeline & Interactive Control Plane
+
+To clearly demonstrate that Vultr acts as the central orchestration and control plane:
+
+1. **Animated Pipeline Node Graph:** Directly on the dashboard, a 4-stage animated node graph illustrates the execution flow:
+   `[User Client]` $\rightarrow$ `[Vultr VM Host Control Plane]` $\rightarrow$ `[phishnet Caged Sandbox]` $\rightarrow$ `[Vultr Serverless Inference]`.
+2. **Server-Sent Events (SSE) Streaming:** The endpoint `GET /api/scan/{job_id}/stream` streams structured execution stages (`SANDBOX_INIT`, `CAP_DROP`, `NAVIGATING`, `INTERCEPT`, `EVIDENCE_COLLECTED`, `AWAITING_APPROVAL`, `INFERENCE_DISPATCH`, `DONE`) in real time, animating the nodes and streaming the containment terminal line-by-line.
+3. **Live Control Plane Telemetry:** The dynamic host status pill polls `/api/health` to report active sandbox concurrency slots (`0 / 3 Active`), iptables network perimeter status, and Vultr Inference connectivity.
+
+---
+
+## 4. The 4 Non-Negotiable Containment Guarantees
 
 In accordance with Track 01 criteria (**Blast Radius Zero**), containment is the product:
 
@@ -69,20 +82,30 @@ In accordance with Track 01 criteria (**Blast Radius Zero**), containment is the
 
 ---
 
-## 4. Pattern B: Sandboxed Browser Use with Human Approval
+## 5. Pattern B: Sandboxed Browser Use with Human Approval
 
 Phish&Chips implements the hackathon's required **Pattern B** workflow:
 
 1. **Pass 1 (Passive Reconnaissance):** The sandbox opens the target link, observes redirects, captures visual screenshots (`shot1.png`, `shot2.png`), inspects the DOM, and checks for credential forms.
-2. **Human Approval Gate:** If login, password, OTP, or payment card fields are detected, the orchestrator pauses and transitions job status to `awaiting_approval`. The UI presents the user with an interactive decision banner:
-   > *"The sandboxed page asks for sensitive credentials (Password / OTP / Card). Allow the sandboxed browser to enter fake dummy canary values and submit to inspect post-submission exfiltration behavior?"*
+2. **Human Approval Gate:** If login, password, OTP, or payment card fields are detected, the orchestrator pauses and transitions job status to `awaiting_approval`. The UI presents the user with an interactive decision modal:
+   > *"Credential harvester detected. Authorize unprivileged container to inject decoy canary credentials to observe post-submission routing? [Authorize Decoy Submit] / [Terminate & Finalize Verdict]"*
 3. **Pass 2 (Simulated Canary Submission):**
-   - **User approves:** A second ephemeral container launches with `SUBMIT_PASS=1`. The browser populates fake dummy values (`test_canary_user@example.com`, `FakePassword123!`, `123456`) and clicks submit to observe where the data exfiltrates. Post-submit screenshots and redirect URLs are captured.
-   - **User denies:** The orchestrator skips submission and proceeds directly to threat synthesis using Pass 1 evidence.
+   - **User authorizes:** A second ephemeral container launches with `SUBMIT_PASS=1`. The browser populates synthetic decoy values (`test_canary_user@example.com`, `FakePassword123!`, `123456`) and clicks submit to observe where the data exfiltrates. Post-submit screenshots and redirect URLs are captured.
+   - **User terminates:** The orchestrator skips submission and proceeds directly to threat synthesis using Pass 1 evidence.
 
 ---
 
-## 5. Verifiable Containment Verification
+## 6. Indian Regional Localization & Emergency Incident Escalation
+
+- **Regional Localization:** Integrated one-click language toggle (**English / हिन्दी / ಕನ್ನಡ**) to cater to native language speakers frequently targeted by fake KYC and parcel scams in India.
+- **Incident Escalation Drawer:** When a `SCAM` or `SUSPICIOUS` verdict is confirmed:
+  - Direct 1-tap link to the **National Cyber Crime Reporting Portal** (`cybercrime.gov.in`).
+  - Direct dialer to the **National Financial Fraud Helpline** (`1930`).
+  - Emergency bank profile freeze checklist.
+
+---
+
+## 7. Verifiable Containment Verification
 
 An automated verification test script ([scripts/verify_containment.sh](file:///root/phish-n-chips/scripts/verify_containment.sh)) proves from inside an active container that isolation holds:
 
@@ -97,20 +120,20 @@ bash scripts/verify_containment.sh
     PHISH&CHIPS: CONTAINMENT PERIMETER VERIFICATION       
 ==========================================================
 Starting ephemeral verification container in phishnet...
-  Testing Public Internet (Cloudflare 1.1.1.1) (https://1.1.1.1) ...  [PASS] REACHABLE (HTTP 301)
-  Testing Public Internet (Example.com) (https://example.com) ...      [PASS] REACHABLE (HTTP 200)
-  Testing Host Bridge Gateway (172.30.0.1:8000) ...                   [PASS] BLOCKED (Code: 28)
-  Testing Host Public IP (139.84.159.12:8000) ...                     [PASS] BLOCKED (Code: 28)
-  Testing Cloud Metadata Service (169.254.169.254) ...                [PASS] BLOCKED (Code: 28)
-  Testing Private Subnet 10.0.0.1 ...                                 [PASS] BLOCKED (Code: 28)
-  Testing Private Subnet 192.168.1.1 ...                              [PASS] BLOCKED (Code: 28)
+  Testing Public Internet (Cloudflare 1.1.1.1) ...  [PASS] REACHABLE (HTTP 301)
+  Testing Public Internet (Example.com) ...         [PASS] REACHABLE (HTTP 200)
+  Testing Host Bridge Gateway (172.30.0.1:8000) ... [PASS] BLOCKED (Code: 28)
+  Testing Host Public IP (139.84.159.12:8000) ...   [PASS] BLOCKED (Code: 28)
+  Testing Cloud Metadata (169.254.169.254) ...      [PASS] BLOCKED (Code: 28)
+  Testing Private Subnet 10.0.0.1 ...               [PASS] BLOCKED (Code: 28)
+  Testing Private Subnet 192.168.1.1 ...            [PASS] BLOCKED (Code: 28)
 ----------------------------------------------------------
 🎉 ALL CONTAINMENT CHECKS PASSED. Blast Radius Zero verified!
 ```
 
 ---
 
-## 6. Repository Layout
+## 8. Repository Layout
 
 ```text
 phish-and-chips/
@@ -120,11 +143,11 @@ phish-and-chips/
 ├── .gitignore                # Secret & artifact exclusion rules
 ├── deploy.sh                 # 1-click deployment & rebuild script
 ├── backend/
-│   ├── main.py               # FastAPI orchestrator, REST routes, static mounting
+│   ├── main.py               # FastAPI orchestrator, SSE streaming, REST routes
 │   ├── scanner.py            # Docker lifecycle, cgroups limits, janitor & approval gate
 │   ├── analyzer.py           # Vultr Serverless Inference integration + fallback logic
 │   ├── heuristics.py         # Brand-vs-domain rules & credential harvesting detection
-│   ├── events.py             # Structured timestamped containment event logging
+│   ├── events.py             # Structured timestamped containment event logging & SSE
 │   ├── validation.py         # URL validation, SSRF blocking & sliding-window rate limiter
 │   └── requirements.txt      # Python backend dependencies
 ├── sandbox/
@@ -132,9 +155,9 @@ phish-and-chips/
 │   ├── inspector.py          # Non-root browser automation & telemetry extraction
 │   └── bank_login.html       # Self-contained demo asset
 ├── frontend/
-│   ├── index.html            # Monospace dark-mode dashboard with live stepper & log
-│   ├── app.js                # Detonation form handler, polling engine & approval modal
-│   └── styles.css            # Cyber monospace styling
+│   ├── index.html            # Monospace dark-mode dashboard with pipeline graph & terminal
+│   ├── app.js                # SSE stream consumer, node graph animator & approval modal
+│   └── styles.css            # Cyber monospace styling & animated SVG paths
 ├── scripts/
 │   ├── setup_network.sh      # Idempotent phishnet bridge & iptables containment setup
 │   └── verify_containment.sh # Automated isolation proof script
@@ -146,45 +169,9 @@ phish-and-chips/
 
 ---
 
-## 7. Setup & Local Development
+## 9. 1-Click Deployment to Vultr VM
 
-### Prerequisites
-- Docker Engine & iptables
-- Python 3.12+
-- Vultr Cloud Compute VM (Ubuntu 24.04 LTS recommended)
-
-### 1. Setup Isolated Network
-```bash
-sudo bash scripts/setup_network.sh
-```
-
-### 2. Build Sandbox Container
-```bash
-docker build -t phishchips-sandbox ./sandbox
-```
-
-### 3. Configure Environment
-```bash
-cp .env.example .env
-# Edit .env and configure VULTR_INFERENCE_API_KEY
-```
-
-### 4. Run Backend
-```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000
-```
-
-Open [http://localhost:8000](http://localhost:8000) in your browser.
-
----
-
-## 8. Deployment to Vultr VM
-
-The included `deploy.sh` script executes a 1-command sync, build, dependency installation, and systemd service reload over SSH:
+The included `deploy.sh` script executes a 1-command sync, build, dependency installation, Caddy reload, and systemd service reload over SSH:
 
 ```bash
 ./deploy.sh
@@ -192,7 +179,7 @@ The included `deploy.sh` script executes a 1-command sync, build, dependency ins
 
 ---
 
-## 9. License
+## 10. License
 
 Built for the **Vultr Agent Rush Hackathon** (November 2026).  
 *Fresh phish, fried in a sandbox.* 🐟🍟

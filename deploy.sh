@@ -4,6 +4,7 @@ set -euo pipefail
 
 SERVER_IP="139.84.159.12"
 KEY_PATH="${HOME}/.ssh/vultr"
+HTTPS_DOMAIN="${SERVER_IP}.sslip.io"
 
 echo "=========================================================="
 echo "    PHISH&CHIPS: DEPLOYING TO VULTR VM (${SERVER_IP})     "
@@ -50,6 +51,11 @@ ssh -i "$KEY_PATH" root@${SERVER_IP} << 'REMOTE_EXEC'
   systemctl enable phishchips.service
   systemctl restart phishchips.service
 
+  echo "--> Checking Caddy reverse proxy..."
+  if systemctl is-active --quiet caddy; then
+    systemctl reload caddy || systemctl restart caddy
+  fi
+
   sleep 2
   systemctl status phishchips.service --no-pager || true
 
@@ -59,5 +65,7 @@ ssh -i "$KEY_PATH" root@${SERVER_IP} << 'REMOTE_EXEC'
 REMOTE_EXEC
 
 echo "=========================================================="
-echo "🎉 DEPLOYMENT COMPLETE! Live at: http://${SERVER_IP}:8000"
+echo "🎉 DEPLOYMENT COMPLETE!"
+echo "   🔒 Secure HTTPS : https://${HTTPS_DOMAIN}"
+echo "   ⚡ Direct HTTP   : http://${SERVER_IP}:8000"
 echo "=========================================================="

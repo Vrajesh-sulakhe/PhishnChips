@@ -16,6 +16,9 @@ from events import log_event, init_job_events
 from analyzer import analyze_threat
 
 BASE_DIR = Path("/root/phish-n-chips")
+if not BASE_DIR.exists():
+    BASE_DIR = Path(__file__).resolve().parent.parent
+
 EVIDENCE_DIR = BASE_DIR / "evidence"
 EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -24,6 +27,7 @@ MAX_CONCURRENT_SCANS = int(os.getenv("MAX_CONCURRENT_SCANS", "3"))
 JOB_RETENTION_MINUTES = int(os.getenv("JOB_RETENTION_MINUTES", "30"))
 
 semaphore = asyncio.Semaphore(MAX_CONCURRENT_SCANS)
+active_scans_count = 0
 
 # Global in-memory job registry
 jobs: Dict[str, Dict[str, Any]] = {}
@@ -32,6 +36,12 @@ job_approval_choices: Dict[str, bool] = {}
 
 def get_job(job_id: str) -> Optional[Dict[str, Any]]:
     return jobs.get(job_id)
+
+def get_active_scans_count() -> int:
+    return active_scans_count
+
+def get_max_scans() -> int:
+    return MAX_CONCURRENT_SCANS
 
 async def run_docker_sandbox(job_id: str, url: str, submit_pass: bool = False) -> Dict[str, Any]:
     """
@@ -42,8 +52,10 @@ async def run_docker_sandbox(job_id: str, url: str, submit_pass: bool = False) -
     os.chmod(job_dir, 0o777)
 
     container_name = f"sandbox-{job_id}"
+    stage_prefix = "SANDBOX_INIT"
     if submit_pass:
         container_name = f"sandbox-{job_id}-p2"
+        stage_prefix = "P2_INIT"
 
     cmd = [
         "docker", "run", "--rm",
@@ -64,11 +76,11 @@ async def run_docker_sandbox(job_id: str, url: str, submit_pass: bool = False) -
         "phishchips-sandbox"
     ]
 
-    log_event(job_id, f"Container created (id {container_name})")
-    log_event(job_id, f"Limits applied: 1 CPU, 1 GB RAM, 256 PIDs, {SCAN_TIMEOUT_SECONDS}s timeout")
-    log_event(job_id, "Network: public internet only, host + private ranges blocked")
-    log_event(job_id, "Secrets inside sandbox: none")
-    log_event(job_id, f"Detonating target: {url}")
+    log_event(job_id, f"Docker container spun up under phishnet network boundary (id {container_name})", stage=stage_prefix)
+    log_event(job_id, f"Enforced: --cap-drop=ALL, 1024MB RAM, 1.0 CPU, 256 PIDs, {SCAN_TIMEOUT_SECONDS}s hard timeout", stage="CAP_DROP")
+    log_event(job_id, "Network: public internet only, host + private ranges blocked via iptables", stage="CAP_DROP")
+    log_event(job_id, "Secrets inside sandbox: none (zero API keys or credentials injected)", stage="CAP_DROP")
+    log_event(job_id, f"Detonating target in headless Chromium: {url}", stage="NAVIGATING")
 
     proc = None
     try:
@@ -79,17 +91,18 @@ async def run_docker_sandbox(job_id: str, url: str, submit_pass: bool = False) -
         )
         await asyncio.wait_for(proc.communicate(), timeout=float(SCAN_TIMEOUT_SECONDS))
     except asyncio.TimeoutError:
-        log_event(job_id, "Detonation timed out. Enforcing immediate container termination.")
+        log_event(job_id, "Detonation timed out. Enforcing immediate container termination via docker kill.", stage="INTERCEPT")
         subprocess.run(["docker", "kill", container_name], capture_output=True)
         subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
         raise TimeoutError(f"Sandbox execution timed out after {SCAN_TIMEOUT_SECONDS}s.")
     except Exception as ex:
-        log_event(job_id, f"Container execution error: {str(ex)}")
+        log_event(job_id, f"Container execution error: {str(ex)}", stage="ERROR")
         raise ex
     finally:
         # Guarantee container destruction
+        subprocess.run(["docker", "kill", container_name], capture_output=True)
         subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
-        log_event(job_id, f"Container destroyed ({container_name})")
+        log_event(job_id, f"Container destroyed ({container_name})", stage="CONTAINER_DESTROYED")
 
     result_path = job_dir / "result.json"
     if not result_path.exists():
@@ -104,11 +117,13 @@ async def process_scan_job(job_id: str, url: str):
     """
     Background worker orchestrating the multi-phase scan pipeline.
     """
+    global active_scans_count
     job = jobs[job_id]
     job["status"] = "running"
     job_dir = EVIDENCE_DIR / job_id
 
     async with semaphore:
+        active_scans_count += 1
         try:
             # Phase 1: Detonate & Inspect
             telemetry = await run_docker_sandbox(job_id, url, submit_pass=False)
@@ -123,9 +138,9 @@ async def process_scan_job(job_id: str, url: str):
 
             # Log events from telemetry
             for blocked in telemetry.get("blocked_events", []):
-                log_event(job_id, f"Blocked: {blocked.get('detail', 'Unauthorized action')}")
+                log_event(job_id, f"Blocked: {blocked.get('detail', 'Unauthorized action')} (SSRF/Malware prevented)", stage="INTERCEPT")
 
-            log_event(job_id, f"Link opened, {len(screenshots)} screenshots captured")
+            log_event(job_id, f"Captured full DOM and {len(screenshots)} visual screenshot(s)", stage="EVIDENCE_COLLECTED")
 
             fields = telemetry.get("fields", {})
             has_credentials = (fields.get("password", 0) > 0 or 
@@ -135,9 +150,9 @@ async def process_scan_job(job_id: str, url: str):
             # Phase 2 (Pattern B): Human Approval Gate
             if has_credentials:
                 job["status"] = "awaiting_approval"
-                log_event(job_id, "Form asking for credentials detected. Pausing for human authorization.")
+                log_event(job_id, "⚠️ Credential harvester detected. Pausing for human authorization (Pattern B).", stage="AWAITING_APPROVAL")
                 
-                # Wait for user input or 30s timeout
+                # Wait for user input or 40s timeout
                 approval_event = asyncio.Event()
                 job_approval_events[job_id] = approval_event
 
@@ -146,10 +161,10 @@ async def process_scan_job(job_id: str, url: str):
                     approved = job_approval_choices.get(job_id, False)
                 except asyncio.TimeoutError:
                     approved = False
-                    log_event(job_id, "Human approval timed out. Continuing with static verdict.")
+                    log_event(job_id, "Human approval timed out. Continuing with static verdict.", stage="INFO")
 
                 if approved:
-                    log_event(job_id, "Human approval received: Authorized dummy submission pass.")
+                    log_event(job_id, "Human approval received: Authorized decoy submission pass with synthetic canary values.", stage="P2_INIT")
                     job["status"] = "running"
                     try:
                         telemetry_p2 = await run_docker_sandbox(job_id, url, submit_pass=True)
@@ -161,25 +176,27 @@ async def process_scan_job(job_id: str, url: str):
                                 screenshots_p2.append(f"/api/scan/{job_id}/shot/{s}")
                         job["screenshots"] = screenshots_p2
                     except Exception as e_p2:
-                        log_event(job_id, f"Submission pass failed: {str(e_p2)}")
+                        log_event(job_id, f"Submission pass failed: {str(e_p2)}", stage="ERROR")
                 else:
-                    log_event(job_id, "Dummy submission declined. Proceeding directly to threat synthesis.")
+                    log_event(job_id, "Decoy submission declined. Proceeding directly to threat synthesis.", stage="INFO")
 
             # Phase 3: AI Analysis & Heuristics Synthesis
             job["status"] = "analyzing"
-            log_event(job_id, "Synthesizing threat signals through Vultr Inference & Heuristics...")
+            log_event(job_id, "[VULTR INFERENCE] Dispatching forensic payload to Vultr Serverless Inference...", stage="INFERENCE_DISPATCH")
 
             analysis = await analyze_threat(job["raw_result"], job_dir)
             job["verdict"] = analysis
 
-            log_event(job_id, "🍟 Phish fried. Sandbox destroyed.")
+            log_event(job_id, "🍟 Phish fried. Sandbox destroyed.", stage="DONE")
             job["status"] = "done"
 
         except Exception as e:
             job["status"] = "error"
             job["error"] = str(e)
-            log_event(job_id, f"Scan aborted: {str(e)}")
-            log_event(job_id, "🍟 Phish fried. Sandbox destroyed.")
+            log_event(job_id, f"Scan aborted: {str(e)}", stage="ERROR")
+            log_event(job_id, "🍟 Phish fried. Sandbox destroyed.", stage="DONE")
+        finally:
+            active_scans_count = max(0, active_scans_count - 1)
 
 def handle_approval(job_id: str, approve: bool) -> bool:
     """Delivers user decision to the paused job."""
@@ -196,7 +213,7 @@ async def janitor_cleanup_task():
     while True:
         try:
             # 1. Clean up orphan containers
-            result = subprocess.run(
+            subprocess.run(
                 ["docker", "ps", "-a", "--filter", "name=sandbox-", "--format", "{{.ID}} {{.CreatedAt}}"],
                 capture_output=True, text=True
             )
@@ -216,4 +233,3 @@ async def janitor_cleanup_task():
             print(f"Janitor error: {e}")
 
         await asyncio.sleep(60)
-
