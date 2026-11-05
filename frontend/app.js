@@ -441,20 +441,20 @@ function renderVerdict(result) {
 
   if (verdict === 'SCAM') {
     verdictHeading.innerText = loc.scam;
-    verdictHeading.className = 'text-2xl font-extrabold tracking-tight font-mono text-red-500';
-    verdictBadge.className = 'mt-1 inline-block px-3 py-0.5 text-xs font-bold rounded-full font-mono bg-red-950 text-red-300 border border-red-700';
+    verdictHeading.className = 'text-2xl font-extrabold tracking-tight font-mono text-[#ef4444]';
+    verdictBadge.className = 'mt-1 inline-block md-chip md-chip-error font-mono';
     verdictBadge.innerText = '🔴 ' + loc.scam;
     escalationDrawer.classList.remove('hidden');
   } else if (verdict === 'SUSPICIOUS') {
     verdictHeading.innerText = loc.suspicious;
-    verdictHeading.className = 'text-2xl font-extrabold tracking-tight font-mono text-amber-500';
-    verdictBadge.className = 'mt-1 inline-block px-3 py-0.5 text-xs font-bold rounded-full font-mono bg-amber-950 text-amber-300 border border-amber-700';
+    verdictHeading.className = 'text-2xl font-extrabold tracking-tight font-mono text-[#f59e0b]';
+    verdictBadge.className = 'mt-1 inline-block md-chip md-chip-warning font-mono';
     verdictBadge.innerText = '🟡 ' + loc.suspicious;
     escalationDrawer.classList.remove('hidden');
   } else {
     verdictHeading.innerText = loc.safe;
-    verdictHeading.className = 'text-2xl font-extrabold tracking-tight font-mono text-emerald-400';
-    verdictBadge.className = 'mt-1 inline-block px-3 py-0.5 text-xs font-bold rounded-full font-mono bg-emerald-950 text-emerald-300 border border-emerald-700';
+    verdictHeading.className = 'text-2xl font-extrabold tracking-tight font-mono text-[#10b981]';
+    verdictBadge.className = 'mt-1 inline-block md-chip md-chip-success font-mono';
     verdictBadge.innerText = '🟢 ' + loc.safe;
     escalationDrawer.classList.add('hidden');
   }
@@ -473,7 +473,7 @@ function renderVerdict(result) {
     targetedDataList.innerHTML = '';
     result.asks_for.forEach(item => {
       const tag = document.createElement('span');
-      tag.className = 'px-2.5 py-0.5 bg-red-900/40 text-red-300 border border-red-800 rounded-full text-[11px] font-mono font-medium';
+      tag.className = 'md-chip md-chip-error text-[11px]';
       tag.innerText = item;
       targetedDataList.appendChild(tag);
     });
@@ -504,15 +504,15 @@ function prependActivityRow(job) {
   if (!activityTableBody || !job.result) return;
 
   const tr = document.createElement('tr');
-  tr.className = 'cursor-pointer hover:bg-white/5 transition-colors';
+  tr.className = 'cursor-pointer hover:bg-[#161616] transition-colors';
   tr.setAttribute('data-url', job.target_url);
 
   const verdict = (job.result.verdict || 'SUSPICIOUS').toUpperCase();
-  let statusBadge = '<span class="badge-status-completed">SAFE</span>';
+  let statusBadge = '<span class="md-chip md-chip-success">COMPLETED</span>';
   if (verdict === 'SCAM') {
-    statusBadge = '<span class="badge-status-blocked">SCAM DETECTED</span>';
+    statusBadge = '<span class="md-chip md-chip-error">SCAM DETECTED</span>';
   } else if (verdict === 'SUSPICIOUS') {
-    statusBadge = '<span class="badge-status-scheduled">SUSPICIOUS</span>';
+    statusBadge = '<span class="md-chip md-chip-warning">SUSPICIOUS</span>';
   }
 
   const now = new Date();

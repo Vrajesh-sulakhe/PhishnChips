@@ -7,216 +7,210 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/static/styles.css">
 </head>
-<body class="min-h-screen flex text-zinc-100 overflow-x-hidden">
+<body class="bg-black text-white min-h-screen flex overflow-x-hidden">
 
-  <!-- LEFT SIDEBAR (Matching Monera luxury dashboard sidebar) -->
-  <aside class="sidebar hidden md:flex flex-col justify-between p-5 border-r border-white/5 bg-[#0d0f15] min-h-screen">
+  <!-- MATERIAL UI DRAWER (SIDEBAR) -->
+  <aside class="sidebar hidden md:flex">
     <div class="space-y-6">
-      <!-- Logo Branding -->
-      <div class="flex items-center justify-between px-2 pt-1">
+      
+      <!-- Brand Header -->
+      <div class="flex items-center justify-between px-2 pt-1 border-b border-[#1f1f1f] pb-4">
         <a href="/" class="flex items-center gap-3 cursor-pointer group">
-          <!-- Neon Seed / Shield Emblem -->
-          <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-lime-500 via-amber-400 to-purple-500 p-[2px] flex items-center justify-center shadow-lg shadow-lime-500/10">
-            <div class="w-full h-full bg-[#0d0f15] rounded-full flex items-center justify-center">
-              <span class="text-xs font-bold text-white">🐟</span>
-            </div>
+          <div class="w-8 h-8 rounded-lg bg-[#f59e0b] flex items-center justify-center text-black font-bold text-sm shadow">
+            🍟
           </div>
           <div>
-            <h1 class="text-sm font-bold tracking-tight text-white group-hover:text-amber-400 transition-colors">Phish&amp;Chips</h1>
-            <p class="text-[10px] text-zinc-500 font-mono">Blast Radius Zero</p>
+            <h1 class="text-sm font-bold text-white tracking-wide">Phish&amp;Chips</h1>
+            <p class="text-[10px] text-zinc-400 font-mono">Track 01 &bull; Blast Radius Zero</p>
           </div>
         </a>
-        <span class="text-xs text-zinc-500 font-mono bg-white/5 px-1.5 py-0.5 rounded">&lt;&gt;</span>
+        <span class="text-[10px] text-zinc-500 font-mono bg-[#1a1a1a] px-1.5 py-0.5 rounded border border-[#2b2b2b]">v2.1</span>
       </div>
 
-      <!-- Main Navigation Menu -->
-      <nav class="space-y-1.5">
-        <button class="sidebar-nav-item w-full active" data-nav="dashboard">
-          <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+      <!-- Navigation Menu -->
+      <nav class="space-y-1">
+        <button class="sidebar-nav-item active" data-nav="dashboard">
+          <svg class="w-4 h-4 text-[#f59e0b] flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
           <span>Dashboard</span>
         </button>
 
-        <button class="sidebar-nav-item w-full" data-nav="landing">
-          <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+        <button class="sidebar-nav-item" data-nav="landing">
+          <svg class="w-4 h-4 text-zinc-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
           <span>Product Overview</span>
         </button>
 
-        <!-- Nested Analytics Category with Tree Line (From screenshot) -->
+        <!-- Nested Containment Group -->
         <div class="pt-2">
-          <div class="flex items-center justify-between px-3 py-1 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
-            <div class="flex items-center gap-2">
-              <svg class="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-              <span>Containment</span>
-            </div>
-            <svg class="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+          <div class="px-3 py-1.5 text-[11px] font-bold text-zinc-500 uppercase tracking-wider font-mono">
+            Containment
           </div>
-
-          <div class="space-y-0.5 mt-1">
-            <button class="sidebar-sub-item w-full text-left active" data-nav="dashboard" data-anchor="detonation">Overview</button>
-            <button class="sidebar-sub-item w-full text-left" data-nav="dashboard" data-anchor="timeline">Orchestration Graph</button>
-            <button class="sidebar-sub-item w-full text-left" data-nav="dashboard" data-anchor="perimeter">Perimeter Shield</button>
-          </div>
+          <button class="sidebar-sub-item active" data-nav="dashboard" data-anchor="detonation">
+            &bull; Detonation Chamber
+          </button>
+          <button class="sidebar-sub-item" data-nav="dashboard" data-anchor="activity">
+            &bull; Live Activity &amp; Terminal
+          </button>
+          <button class="sidebar-sub-item" data-nav="landing" data-anchor="architecture">
+            &bull; Architecture Specs
+          </button>
         </div>
 
-        <button class="sidebar-nav-item w-full" data-nav="dashboard" data-anchor="activity">
-          <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <button class="sidebar-nav-item" data-nav="dashboard" data-anchor="activity">
+          <svg class="w-4 h-4 text-zinc-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
           <span>Scan Logs &amp; SSE</span>
-        </button>
-
-        <button class="sidebar-nav-item w-full" data-nav="landing" data-anchor="architecture">
-          <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-          <span>Architecture Specs</span>
         </button>
       </nav>
     </div>
 
-    <!-- Bottom Sidebar Section (Settings + Need Help Card) -->
-    <div class="space-y-3 pt-4 border-t border-white/5">
-      <button class="sidebar-nav-item w-full">
-        <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        <span>Host Daemon v2.1</span>
-      </button>
+    <!-- Bottom Sidebar Section -->
+    <div class="space-y-3 pt-4 border-t border-[#1f1f1f]">
+      <!-- Host Daemon Status -->
+      <div class="px-3 py-2 rounded-lg bg-[#121212] border border-[#242424] flex items-center justify-between text-xs font-mono">
+        <span class="text-zinc-400">Host Daemon</span>
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      </div>
 
-      <!-- Need Help Card matching screenshot -->
-      <div class="help-card space-y-2">
-        <h4 class="text-xs font-bold text-white">Need Cyber Help?</h4>
+      <!-- Need Help Card -->
+      <div class="p-3 rounded-lg bg-[#141414] border border-[#282828] space-y-2">
+        <div class="flex items-center gap-1.5 text-xs font-bold text-white">
+          <span>🚨</span>
+          <span>Need Cyber Help?</span>
+        </div>
         <p class="text-[11px] text-zinc-400 leading-relaxed">
           National 1930 Cyber Fraud helpline &amp; CERT-In escalation active.
         </p>
-        <a href="tel:1930" class="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-400 hover:text-amber-300 transition-colors">
-          <span>Call 1930 Helpline</span>
-          <span>&gt;</span>
+        <a href="tel:1930" class="inline-flex items-center gap-1 text-[11px] font-bold text-[#f59e0b] hover:underline">
+          <span>Call 1930 Helpline &rarr;</span>
         </a>
       </div>
     </div>
   </aside>
 
-  <!-- MAIN VIEWPORT -->
-  <main class="flex-1 flex flex-col min-w-0 bg-[#090a0f] min-h-screen">
+  <!-- MAIN CANVAS -->
+  <main class="flex-1 flex flex-col min-w-0 bg-black min-h-screen">
 
-    <!-- Top Navigation Bar (Matching screenshot) -->
-    <header class="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-[#090a0f]/80 backdrop-blur-md sticky top-0 z-40">
+    <!-- TOP APP BAR -->
+    <header class="flex items-center justify-between px-6 py-4 bg-black border-b border-[#1f1f1f] sticky top-0 z-40">
       <div class="flex items-center gap-4">
-        <!-- Mobile Sidebar Toggle -->
-        <button id="mobileMenuBtn" class="md:hidden p-2 text-zinc-400 hover:text-white rounded-lg bg-white/5">
+        <!-- Mobile Drawer Toggle -->
+        <button id="mobileMenuBtn" class="md:hidden p-2 text-zinc-400 hover:text-white rounded bg-[#1a1a1a]">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
 
-        <!-- Page Title & Mode Switcher -->
-        <div>
-          <h2 id="topbarTitle" class="text-2xl font-bold tracking-tight text-white">Overview</h2>
-        </div>
+        <h2 id="topbarTitle" class="text-xl font-bold text-white tracking-tight">Overview</h2>
 
-        <!-- View Switcher Pills -->
-        <div class="hidden sm:flex items-center p-1 bg-[#131620] rounded-full border border-white/10 ml-4 text-xs font-medium">
-          <button id="viewDashboardBtn" class="px-3.5 py-1 rounded-full bg-white/10 text-white font-semibold transition-all shadow-sm">
+        <!-- Mode Toggle Switcher -->
+        <div class="hidden sm:flex items-center p-0.5 bg-[#141414] rounded-lg border border-[#282828] ml-4 text-xs font-mono">
+          <button id="viewDashboardBtn" class="px-3 py-1 rounded bg-[#242424] text-white font-semibold">
             Detonation Console
           </button>
-          <button id="viewLandingBtn" class="px-3.5 py-1 rounded-full text-zinc-400 hover:text-white transition-all">
+          <button id="viewLandingBtn" class="px-3 py-1 rounded text-zinc-400 hover:text-white">
             Product Showcase
           </button>
         </div>
       </div>
 
-      <!-- Right Header Actions (Profile & Controls from screenshot) -->
+      <!-- Right App Bar Status Chips -->
       <div class="flex items-center gap-3">
-        <!-- Live Perimeter Indicator -->
-        <div class="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/40 border border-emerald-500/30 text-[11px] font-mono text-emerald-300">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <!-- phishnet Status Chip -->
+        <div class="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#121212] border border-[#282828] text-xs font-mono text-emerald-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
           <span>phishnet 172.30.0.0/16</span>
         </div>
 
-        <!-- User / Node Profile Pill (from screenshot: Justin Carder style) -->
-        <div class="flex items-center gap-2.5 bg-[#131620] hover:bg-[#1a1e28] px-3 py-1.5 rounded-full border border-white/10 cursor-pointer transition-colors shadow-sm">
-          <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-400 flex items-center justify-center text-[10px] font-bold text-white shadow-inner">
+        <!-- Node Profile Pill -->
+        <div class="flex items-center gap-2 bg-[#141414] px-3 py-1.5 rounded-lg border border-[#282828] text-xs font-mono">
+          <div class="w-5 h-5 rounded bg-[#f59e0b] text-black font-bold flex items-center justify-center text-[10px]">
             VP
           </div>
-          <span class="text-xs font-semibold text-zinc-200">Vultr BLR Control Plane</span>
-          <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          <span class="text-zinc-200">Vultr BLR Control Plane</span>
         </div>
       </div>
     </header>
 
     <!-- CONTENT WRAPPER -->
-    <div class="p-6 md:p-8 space-y-7 max-w-7xl mx-auto w-full">
+    <div class="p-6 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
 
       <!-- ======================================================== -->
-      <!-- SECTION 1: DETONATION CONSOLE (The Monera-Style Dashboard) -->
+      <!-- VIEW 1: DETONATION CONSOLE (Material UI Dashboard) -->
       <!-- ======================================================== -->
       <div id="dashboardSection" class="space-y-6">
 
-        <!-- 4 TOP METRIC CARDS (Exact match to Balance, Expenses, Income, Refunded) -->
+        <!-- 4 TOP METRIC CARDS -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <!-- Card 1: Balance -> Active Sandboxes -->
-          <div class="metric-card">
-            <div class="flex items-center justify-between text-xs text-zinc-400">
+          
+          <!-- Card 1: Active Sandboxes -->
+          <div class="md-card">
+            <div class="flex items-center justify-between text-xs text-zinc-400 font-mono">
               <span>Active Sandboxes</span>
-              <span class="metric-badge-green font-mono">+100% ISOLATED</span>
+              <span class="md-chip md-chip-success">100% ISOLATED</span>
             </div>
-            <div class="mt-3 flex items-baseline justify-between">
+            <div class="mt-2.5">
               <span id="slotsBadge" class="text-2xl lg:text-3xl font-extrabold text-white font-mono">0 / 3 Active</span>
             </div>
-            <p class="text-[11px] text-zinc-500 mt-1">Concurrency throttled to 3</p>
+            <p class="text-[11px] text-zinc-500 font-mono mt-1">Concurrency throttled to 3</p>
           </div>
 
-          <!-- Card 2: Expenses -> Blast Radius -->
-          <div class="metric-card">
-            <div class="flex items-center justify-between text-xs text-zinc-400">
+          <!-- Card 2: Blast Radius Zero -->
+          <div class="md-card">
+            <div class="flex items-center justify-between text-xs text-zinc-400 font-mono">
               <span>Blast Radius</span>
-              <span class="metric-badge-red font-mono">0 LEAKS</span>
+              <span class="md-chip md-chip-error">0 LEAKS</span>
             </div>
-            <div class="mt-3 flex items-baseline justify-between">
+            <div class="mt-2.5">
               <span class="text-2xl lg:text-3xl font-extrabold text-white font-mono">Hard Cgroup</span>
             </div>
-            <p class="text-[11px] text-zinc-500 mt-1">1024MB &bull; 1.0 CPU &bull; 256 PIDs</p>
+            <p class="text-[11px] text-zinc-500 font-mono mt-1">1024MB &bull; 1.0 CPU &bull; 256 PIDs</p>
           </div>
 
-          <!-- Card 3: Income -> Vultr AI Engine -->
-          <div class="metric-card">
-            <div class="flex items-center justify-between text-xs text-zinc-400">
+          <!-- Card 3: Threat Synthesis -->
+          <div class="md-card">
+            <div class="flex items-center justify-between text-xs text-zinc-400 font-mono">
               <span>Threat Synthesis</span>
-              <span class="metric-badge-purple font-mono">VISION + LLM</span>
+              <span class="md-chip md-chip-warning">VISION + LLM</span>
             </div>
-            <div class="mt-3 flex items-baseline justify-between">
-              <span class="text-2xl lg:text-3xl font-extrabold text-white font-mono">Vultr Serverless</span>
+            <div class="mt-2.5">
+              <span class="text-2xl lg:text-3xl font-extrabold text-white font-mono">Vultr AI</span>
             </div>
-            <p class="text-[11px] text-zinc-500 mt-1">api.vultrinference.com</p>
+            <p class="text-[11px] text-zinc-500 font-mono mt-1">api.vultrinference.com</p>
           </div>
 
-          <!-- Card 4: Refunded -> Threats Fried -->
-          <div class="metric-card">
-            <div class="flex items-center justify-between text-xs text-zinc-400">
+          <!-- Card 4: Threats Neutralized -->
+          <div class="md-card">
+            <div class="flex items-center justify-between text-xs text-zinc-400 font-mono">
               <span>Threats Neutralized</span>
-              <span class="metric-badge-green font-mono">+24 TOTAL</span>
+              <span class="md-chip md-chip-success">+24 TOTAL</span>
             </div>
-            <div class="mt-3 flex items-baseline justify-between">
+            <div class="mt-2.5">
               <span class="text-2xl lg:text-3xl font-extrabold text-white font-mono">100% Contained</span>
             </div>
-            <p class="text-[11px] text-zinc-500 mt-1">Ephemeral container auto-purge</p>
+            <p class="text-[11px] text-zinc-500 font-mono mt-1">Ephemeral container auto-purge</p>
           </div>
+
         </div>
 
-        <!-- MIDDLE ROW (2 Columns: Revenue Growth Style Left + Expense Breakdown Donut Right) -->
+        <!-- MIDDLE ROW: Detonation Chamber & Containment Matrix -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-          <!-- Left Card (8 cols): Detonation Chamber & Glowing Neon Bar Matrix -->
-          <div class="lg:col-span-8 chart-card flex flex-col justify-between space-y-6">
+          <!-- Left Column (8 cols): Detonation Chamber -->
+          <div class="lg:col-span-8 md-card space-y-6">
+            
             <!-- Header Row -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#242424] pb-4">
               <div class="flex items-center gap-2">
                 <h3 class="text-base font-bold text-white">Detonation Chamber</h3>
-                <span class="metric-badge-green font-mono">ARMED</span>
+                <span class="md-chip md-chip-success">ARMED</span>
               </div>
 
-              <!-- Time Filters (7d, 1m, 3m from screenshot -> Concurrency limits) -->
-              <div class="flex items-center p-1 bg-[#0b0d13] rounded-lg border border-white/10 text-xs font-mono text-zinc-400 self-start sm:self-auto">
-                <button class="px-2.5 py-0.5 rounded bg-white/10 text-white font-semibold">Sandbox</button>
+              <!-- Scope Switchers -->
+              <div class="flex items-center p-0.5 bg-[#1a1a1a] rounded-lg border border-[#2b2b2b] text-xs font-mono text-zinc-400">
+                <button class="px-2.5 py-0.5 rounded bg-[#2e2e2e] text-white font-semibold">Sandbox</button>
                 <button class="px-2.5 py-0.5 hover:text-white">Network</button>
-                <button class="px-2.5 py-0.5 hover:text-white">AI</button>
+                <button class="px-2.5 py-0.5 hover:text-white">Inference</button>
               </div>
             </div>
 
-            <!-- Detonation Target Input Bar -->
+            <!-- Target URL Detonation Form -->
             <form id="scanForm" class="space-y-3">
               <div class="flex flex-col sm:flex-row gap-2.5">
                 <div class="relative flex-1">
@@ -225,152 +219,186 @@
                     id="targetUrl" 
                     placeholder="Enter suspicious target link (e.g. fake KYC, UPI refund, bank scam)..." 
                     required
-                    class="w-full bg-[#0b0d13] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-400 text-zinc-100 placeholder-zinc-500 font-mono transition-colors"
+                    class="w-full bg-[#181818] border border-[#333333] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#f59e0b] text-zinc-100 placeholder-zinc-500 font-mono transition-colors"
                   >
                 </div>
                 <button 
                   type="submit" 
                   id="submitBtn"
-                  class="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold px-6 py-3 rounded-xl text-sm transition-all shadow-lg shadow-purple-500/20 active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap"
+                  class="md-btn-primary whitespace-nowrap"
                 >
                   <span>Detonate in Sandbox</span>
                   <span>⚡</span>
                 </button>
               </div>
 
-              <!-- Quick Test Presets -->
-              <div class="flex flex-wrap items-center gap-2 text-xs text-zinc-400 pt-1">
-                <span class="text-zinc-500 font-mono text-[11px]">Presets:</span>
-                <button type="button" class="preset-btn px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 font-mono transition-colors" data-url="https://example.com">
+              <!-- Quick Presets -->
+              <div class="flex flex-wrap items-center gap-2 text-xs text-zinc-400 pt-1 font-mono">
+                <span class="text-zinc-500">Presets:</span>
+                <button type="button" class="preset-btn px-2.5 py-1 rounded bg-[#1c1c1c] hover:bg-[#252525] border border-[#333333] text-zinc-300 transition-colors" data-url="https://example.com">
                   🟢 example.com (Safe)
                 </button>
-                <button type="button" class="preset-btn px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 font-mono transition-colors" data-url="https://en.wikipedia.org">
+                <button type="button" class="preset-btn px-2.5 py-1 rounded bg-[#1c1c1c] hover:bg-[#252525] border border-[#333333] text-zinc-300 transition-colors" data-url="https://en.wikipedia.org">
                   🟢 wikipedia.org (Safe)
                 </button>
-                <button type="button" class="preset-btn px-2.5 py-1 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-800/80 text-red-300 font-mono transition-colors font-semibold" data-url="demo://fake-bank">
+                <button type="button" class="preset-btn px-2.5 py-1 rounded bg-[#2a1313] hover:bg-[#381a1a] border border-[#ef4444]/60 text-red-300 font-semibold transition-colors" data-url="demo://fake-bank">
                   🔴 Fake SBI Scam (SSRF + Malware Test)
                 </button>
               </div>
             </form>
 
-            <!-- Glowing Neon Vertical Pill Bars (Matching Revenue Growth chart in screenshot) -->
+            <!-- Containment Pipeline Bars (WITH HOVER-ONLY TOOLTIPS - NO STUCK TOOLTIP) -->
             <div class="pt-2">
               <div class="flex justify-between items-center text-xs text-zinc-400 mb-2 font-mono">
                 <span>Containment Pipeline Activity</span>
-                <span class="text-purple-400 font-semibold">Strict cgroup bounds</span>
+                <span class="text-[#f59e0b] font-semibold">Strict cgroup bounds</span>
               </div>
 
               <div class="bar-track">
-                <!-- Floating Tooltip on active bar (like $4,987 in screenshot) -->
-                <div class="bar-tooltip">
-                  <div class="flex items-center gap-1.5 text-xs font-bold text-white font-mono">
-                    <span class="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
-                    <span>0 Leaks Allowed</span>
+                <!-- Bar 1: Init -->
+                <div class="bar-col">
+                  <div class="bar-pill-wrapper">
+                    <div class="bar-tooltip">
+                      <div>Stage 1: Container Init</div>
+                      <div class="text-zinc-400 text-[10px]">phishnet 172.30.0.0/16</div>
+                    </div>
+                    <div class="bar-pill h-[50px]"></div>
                   </div>
-                  <div class="text-[10px] text-zinc-400 mt-0.5 font-mono">Hard Linux Jail Active</div>
+                  <span class="bar-label">Init</span>
                 </div>
 
-                <!-- 7 Bars (representing orchestration stages) -->
-                <div class="flex flex-col items-center gap-2">
-                  <div class="neon-bar neon-bar-purple h-[55px]" title="Init"></div>
-                  <span class="text-[11px] text-zinc-500 font-mono">Init</span>
+                <!-- Bar 2: Jail -->
+                <div class="bar-col">
+                  <div class="bar-pill-wrapper">
+                    <div class="bar-tooltip">
+                      <div>Stage 2: Linux Jail</div>
+                      <div class="text-zinc-400 text-[10px]">--cap-drop=ALL, Read-Only Root</div>
+                    </div>
+                    <div class="bar-pill h-[80px]"></div>
+                  </div>
+                  <span class="bar-label">Jail</span>
                 </div>
 
-                <div class="flex flex-col items-center gap-2">
-                  <div class="neon-bar neon-bar-purple h-[90px]" title="Jail"></div>
-                  <span class="text-[11px] text-zinc-500 font-mono">Jail</span>
+                <!-- Bar 3: SSRF Drop -->
+                <div class="bar-col">
+                  <div class="bar-pill-wrapper">
+                    <div class="bar-tooltip">
+                      <div>Stage 3: SSRF Filter</div>
+                      <div class="text-zinc-400 text-[10px]">169.254.x &amp; RFC1918 Dropped</div>
+                    </div>
+                    <div class="bar-pill h-[125px]"></div>
+                  </div>
+                  <span class="bar-label">SSRF</span>
                 </div>
 
-                <div class="flex flex-col items-center gap-2">
-                  <div class="neon-bar neon-bar-purple h-[140px]" title="SSRF Drop"></div>
-                  <span class="text-[11px] text-zinc-500 font-mono">SSRF</span>
+                <!-- Bar 4: DOM -->
+                <div class="bar-col">
+                  <div class="bar-pill-wrapper">
+                    <div class="bar-tooltip">
+                      <div>Stage 4: Headless Playwright</div>
+                      <div class="text-zinc-400 text-[10px]">DOM Tree &amp; Visual Artifacts</div>
+                    </div>
+                    <div class="bar-pill h-[70px]"></div>
+                  </div>
+                  <span class="bar-label">DOM</span>
                 </div>
 
-                <div class="flex flex-col items-center gap-2">
-                  <div class="neon-bar neon-bar-purple h-[75px]" title="DOM Capture"></div>
-                  <span class="text-[11px] text-zinc-500 font-mono">DOM</span>
+                <!-- Bar 5: Run (Active) -->
+                <div class="bar-col">
+                  <div class="bar-pill-wrapper">
+                    <div class="bar-tooltip">
+                      <div>Stage 5: Caged Execution</div>
+                      <div class="text-zinc-400 text-[10px]">0 Leaks Allowed &bull; 45s Kill</div>
+                    </div>
+                    <div class="bar-pill h-[150px] active"></div>
+                  </div>
+                  <span class="bar-label text-[#f59e0b] font-bold">Run</span>
                 </div>
 
-                <!-- Active Glowing Bar (Friday in screenshot) -->
-                <div class="flex flex-col items-center gap-2">
-                  <div class="neon-bar neon-bar-active h-[175px]" title="Active Caged Execution"></div>
-                  <span class="text-[11px] text-purple-300 font-bold font-mono">Run</span>
+                <!-- Bar 6: AI -->
+                <div class="bar-col">
+                  <div class="bar-pill-wrapper">
+                    <div class="bar-tooltip">
+                      <div>Stage 6: Vultr AI Inference</div>
+                      <div class="text-zinc-400 text-[10px]">Llama-3 Vision Synthesis</div>
+                    </div>
+                    <div class="bar-pill h-[40px]"></div>
+                  </div>
+                  <span class="bar-label">AI</span>
                 </div>
 
-                <div class="flex flex-col items-center gap-2">
-                  <div class="neon-bar neon-bar-purple h-[40px]" title="Vultr AI Synthesis"></div>
-                  <span class="text-[11px] text-zinc-500 font-mono">AI</span>
-                </div>
-
-                <div class="flex flex-col items-center gap-2">
-                  <div class="neon-bar neon-bar-purple h-[40px]" title="Container Purged"></div>
-                  <span class="text-[11px] text-zinc-500 font-mono">Purge</span>
+                <!-- Bar 7: Purge -->
+                <div class="bar-col">
+                  <div class="bar-pill-wrapper">
+                    <div class="bar-tooltip">
+                      <div>Stage 7: Sub-second Teardown</div>
+                      <div class="text-zinc-400 text-[10px]">Zero Persistence &bull; Clean Purge</div>
+                    </div>
+                    <div class="bar-pill h-[40px]"></div>
+                  </div>
+                  <span class="bar-label">Purge</span>
                 </div>
               </div>
             </div>
+
           </div>
 
-          <!-- Right Card (4 cols): Expense Breakdown Donut Chart (Matching screenshot) -->
-          <div class="lg:col-span-4 donut-card flex flex-col justify-between">
-            <div class="flex items-center justify-between border-b border-white/5 pb-3">
+          <!-- Right Column (4 cols): Containment Breakdown Donut -->
+          <div class="lg:col-span-4 md-card flex flex-col justify-between space-y-4">
+            
+            <div class="flex items-center justify-between border-b border-[#242424] pb-3">
               <h3 class="text-base font-bold text-white">Containment Breakdown</h3>
               <span class="text-zinc-500 text-xs font-mono">&gt;</span>
             </div>
 
-            <!-- Circular Donut SVG Chart with Neon Colors -->
-            <div class="relative flex items-center justify-center my-6">
-              <svg class="w-48 h-48 transform -rotate-90" viewBox="0 0 100 100">
-                <!-- Background ring -->
-                <circle cx="50" cy="50" r="38" stroke="#1c202d" stroke-width="14" fill="transparent" />
-                <!-- Segment 1: Lime Green 65% (SSRF & Metadata drops) -->
-                <circle cx="50" cy="50" r="38" stroke="#a3e635" stroke-width="14" stroke-dasharray="155 238" stroke-dashoffset="0" fill="transparent" class="transition-all hover:opacity-90" />
-                <!-- Segment 2: Neon Purple 23% (cgroup constraints) -->
-                <circle cx="50" cy="50" r="38" stroke="#c084fc" stroke-width="14" stroke-dasharray="55 238" stroke-dashoffset="-155" fill="transparent" class="transition-all hover:opacity-90" />
-                <!-- Segment 3: Deep Grey/Indigo 12% (Ephemeral destruction) -->
-                <circle cx="50" cy="50" r="38" stroke="#38bdf8" stroke-width="14" stroke-dasharray="28 238" stroke-dashoffset="-210" fill="transparent" class="transition-all hover:opacity-90" />
+            <!-- Solid Donut Chart -->
+            <div class="relative flex items-center justify-center my-4">
+              <svg class="donut-svg" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="38" stroke="#1c1c1c" stroke-width="14" fill="transparent" />
+                <!-- 65% Emerald (SSRF & Network Jails) -->
+                <circle cx="50" cy="50" r="38" stroke="#10b981" stroke-width="14" stroke-dasharray="155 238" stroke-dashoffset="0" fill="transparent" />
+                <!-- 23% Blue (cgroups & Read-only root) -->
+                <circle cx="50" cy="50" r="38" stroke="#3b82f6" stroke-width="14" stroke-dasharray="55 238" stroke-dashoffset="-155" fill="transparent" />
+                <!-- 12% Amber (Ephemeral disposal) -->
+                <circle cx="50" cy="50" r="38" stroke="#f59e0b" stroke-width="14" stroke-dasharray="28 238" stroke-dashoffset="-210" fill="transparent" />
               </svg>
 
-              <!-- Floating Tooltip Pill (like 65% Miscellaneous in screenshot) -->
-              <div class="donut-floating-pill">
-                <div class="text-xs font-bold text-lime-300 font-mono">65%</div>
-                <div class="text-[10px] text-lime-200/80 font-mono">SSRF Blocked</div>
-              </div>
-
-              <!-- Center Cutout Label -->
-              <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span class="text-xs text-zinc-500 font-mono">Perimeter</span>
-                <span class="text-lg font-extrabold text-white font-mono">100%</span>
+              <!-- Center Label -->
+              <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none font-mono">
+                <span class="text-[11px] text-zinc-500">Perimeter</span>
+                <span class="text-lg font-bold text-white">100%</span>
               </div>
             </div>
 
-            <!-- Legend with Colored Dots (Matching screenshot) -->
-            <div class="flex flex-wrap items-center justify-between text-xs text-zinc-400 pt-3 border-t border-white/5 font-mono">
+            <!-- Solid Legend Chips -->
+            <div class="flex flex-wrap items-center justify-between text-xs text-zinc-400 pt-3 border-t border-[#242424] font-mono">
               <div class="flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-full bg-lime-400"></span>
-                <span>SSRF/Net</span>
+                <span class="w-2.5 h-2.5 rounded-full bg-[#10b981]"></span>
+                <span>SSRF (65%)</span>
               </div>
               <div class="flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-full bg-purple-400"></span>
-                <span>cgroups</span>
+                <span class="w-2.5 h-2.5 rounded-full bg-[#3b82f6]"></span>
+                <span>cgroup (23%)</span>
               </div>
               <div class="flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
-                <span>Purge</span>
+                <span class="w-2.5 h-2.5 rounded-full bg-[#f59e0b]"></span>
+                <span>Purge (12%)</span>
               </div>
             </div>
+
           </div>
 
         </div>
 
-        <!-- LIVE DETONATION WORKSPACE (SPLIT VIEW: Terminal Left + Forensics Right) -->
+        <!-- SPLIT-VIEW DETONATION WORKSPACE (Appears on Scan) -->
         <div id="detonationWorkspace" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
 
           <!-- Left Column: Live Terminal (SSE Stream) -->
-          <div class="lg:col-span-6 chart-card space-y-3">
-            <div class="flex justify-between items-center border-b border-white/5 pb-3">
+          <div class="lg:col-span-6 md-card space-y-3">
+            <div class="flex justify-between items-center border-b border-[#242424] pb-3">
               <div class="flex items-center gap-2">
-                <span class="text-xs uppercase tracking-wider font-bold text-amber-400 font-mono">Live Containment Terminal</span>
-                <span id="sseIndicator" class="text-[9px] px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-400 font-mono border border-amber-700/60 animate-pulse">STREAMING SSE</span>
+                <span class="text-xs uppercase tracking-wider font-bold text-[#f59e0b] font-mono">Live Containment Terminal</span>
+                <span id="sseIndicator" class="text-[9px] px-2 py-0.5 rounded bg-[#2a1b0b] text-[#f59e0b] font-mono border border-[#f59e0b]/50 animate-pulse">STREAMING SSE</span>
               </div>
               <span id="eventCount" class="text-[10px] text-zinc-500 font-mono">0 events</span>
             </div>
@@ -386,27 +414,27 @@
           </div>
 
           <!-- Right Column: Visual Forensics & Verdict -->
-          <div class="lg:col-span-6 chart-card space-y-4">
+          <div class="lg:col-span-6 md-card space-y-4">
             
-            <!-- Verdict Card (Shows upon completion) -->
-            <div id="verdictCard" class="hidden bg-[#0e111a] border border-white/10 rounded-2xl p-5 space-y-3">
-              <div class="flex justify-between items-center border-b border-white/5 pb-3">
+            <!-- Verdict Card -->
+            <div id="verdictCard" class="hidden bg-[#181818] border border-[#2b2b2b] rounded-lg p-5 space-y-3">
+              <div class="flex justify-between items-center border-b border-[#242424] pb-3">
                 <div>
                   <span class="text-xs uppercase tracking-wider text-zinc-500 font-mono block">Threat Verdict</span>
-                  <span id="verdictBadge" class="mt-1 inline-block px-3 py-0.5 text-xs font-bold rounded-full font-mono">--</span>
+                  <span id="verdictBadge" class="mt-1 inline-block px-3 py-0.5 text-xs font-bold rounded font-mono">--</span>
                 </div>
 
-                <!-- Language Localization Toggle -->
-                <div class="flex items-center gap-1 bg-[#131620] p-1 rounded-full border border-white/10 text-xs font-mono">
-                  <button type="button" class="lang-btn px-2.5 py-0.5 rounded-full transition-colors text-amber-400 font-bold bg-zinc-800" data-lang="en">EN</button>
-                  <button type="button" class="lang-btn px-2.5 py-0.5 rounded-full transition-colors text-zinc-400 hover:text-zinc-200" data-lang="hi">हिन्दी</button>
-                  <button type="button" class="lang-btn px-2.5 py-0.5 rounded-full transition-colors text-zinc-400 hover:text-zinc-200" data-lang="kn">ಕನ್ನಡ</button>
+                <!-- Language Localization Switcher -->
+                <div class="flex items-center gap-1 bg-[#121212] p-1 rounded border border-[#282828] text-xs font-mono">
+                  <button type="button" class="lang-btn px-2.5 py-0.5 rounded transition-colors text-[#f59e0b] font-bold bg-[#242424]" data-lang="en">EN</button>
+                  <button type="button" class="lang-btn px-2.5 py-0.5 rounded transition-colors text-zinc-400 hover:text-white" data-lang="hi">हिन्दी</button>
+                  <button type="button" class="lang-btn px-2.5 py-0.5 rounded transition-colors text-zinc-400 hover:text-white" data-lang="kn">ಕನ್ನಡ</button>
                 </div>
               </div>
 
               <div>
                 <div id="verdictHeading" class="text-2xl font-extrabold tracking-tight font-mono">Analyzing...</div>
-                <div id="brandBanner" class="hidden mt-2 p-2.5 bg-red-950/60 border border-red-800/80 rounded-xl text-xs text-red-300 font-mono">
+                <div id="brandBanner" class="hidden mt-2 p-2.5 bg-[#2a1313] border border-red-800 rounded text-xs text-red-300 font-mono">
                   <span class="font-bold">⚠️ Brand Impersonation:</span> Pretending to be <span id="brandName" class="underline font-bold"></span>
                 </div>
               </div>
@@ -421,19 +449,19 @@
                 <ul id="reasonsList" class="text-xs space-y-1.5 text-zinc-300 list-disc list-inside"></ul>
               </div>
 
-              <div class="text-[10px] text-zinc-500 pt-2 border-t border-white/5 flex justify-between items-center font-mono">
+              <div class="text-[10px] text-zinc-500 pt-2 border-t border-[#242424] flex justify-between items-center font-mono">
                 <span id="threatSourceText">Vultr Serverless Inference</span>
-                <span id="confidenceText" class="text-amber-400 font-semibold"></span>
+                <span id="confidenceText" class="text-[#f59e0b] font-semibold"></span>
               </div>
 
-              <!-- Emergency Escalation Drawer (For High-Risk Scam verdicts) -->
-              <div id="escalationDrawer" class="hidden p-3.5 bg-red-950/30 border border-red-800/60 rounded-xl space-y-2">
+              <!-- Emergency Escalation Drawer -->
+              <div id="escalationDrawer" class="hidden p-3.5 bg-[#2a1313] border border-red-900 rounded space-y-2">
                 <div class="flex items-center justify-between">
                   <span class="text-xs font-bold text-red-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
                     <span>🚨</span>
                     <span id="escalationTitle">Emergency Incident Escalation</span>
                   </span>
-                  <span class="text-[10px] px-2 py-0.5 rounded-full bg-red-900/60 text-red-200 font-mono">INDIA CERT-IN</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded bg-red-900/60 text-red-200 font-mono">INDIA CERT-IN</span>
                 </div>
                 
                 <p id="escalationDesc" class="text-xs text-zinc-300 leading-relaxed">
@@ -441,11 +469,11 @@
                 </p>
 
                 <div class="grid grid-cols-2 gap-2 text-xs font-mono pt-1">
-                  <a href="https://cybercrime.gov.in" target="_blank" rel="noopener noreferrer" class="p-2 bg-[#090b10] hover:bg-zinc-800 rounded-lg border border-red-900 text-red-300 flex items-center justify-between transition-colors">
+                  <a href="https://cybercrime.gov.in" target="_blank" rel="noopener noreferrer" class="p-2 bg-[#121212] hover:bg-[#1f1f1f] rounded border border-red-900 text-red-300 flex items-center justify-between transition-colors">
                     <span>cybercrime.gov.in</span>
                     <span>&nearr;</span>
                   </a>
-                  <a href="tel:1930" class="p-2 bg-[#090b10] hover:bg-zinc-800 rounded-lg border border-red-900 text-amber-400 flex items-center justify-between transition-colors font-bold">
+                  <a href="tel:1930" class="p-2 bg-[#121212] hover:bg-[#1f1f1f] rounded border border-red-900 text-[#f59e0b] flex items-center justify-between transition-colors font-bold">
                     <span>Helpline: 1930</span>
                     <span>📞</span>
                   </a>
@@ -453,13 +481,13 @@
               </div>
             </div>
 
-            <!-- Sandboxed Visual Capture -->
+            <!-- Visual Capture -->
             <div class="space-y-2">
               <div class="flex justify-between items-center text-xs text-zinc-400 font-mono">
                 <span>Sandboxed Browser POV</span>
                 <span id="shotCount">0 captures</span>
               </div>
-              <div class="scanlines-overlay border border-white/10 rounded-xl overflow-hidden bg-black flex items-center justify-center min-h-[220px]">
+              <div class="scanlines-overlay border border-[#282828] rounded-lg overflow-hidden bg-black flex items-center justify-center min-h-[220px]">
                 <img id="primaryShot" src="" alt="Capture" class="w-full object-contain max-h-[300px] rounded cursor-zoom-in">
               </div>
               <p class="text-[10px] text-zinc-500 text-center font-mono">Click thumbnail to inspect full-resolution screenshot</p>
@@ -469,32 +497,24 @@
 
         </div>
 
-        <!-- RECENT ACTIVITY TABLE (Matching Recent Activity in screenshot) -->
-        <div id="recentActivitySection" class="table-card space-y-4">
-          <!-- Table Controls Header -->
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-4">
+        <!-- RECENT ACTIVITY DATA TABLE -->
+        <div id="recentActivitySection" class="md-card space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#242424] pb-4">
             <h3 class="text-base font-bold text-white">Recent Activity / Detonations</h3>
 
             <div class="flex items-center gap-2 text-xs font-mono">
-              <div class="relative">
-                <input 
-                  type="text" 
-                  placeholder="Search targets..." 
-                  class="bg-[#0b0d13] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-purple-400"
-                >
-              </div>
-              <button class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/10 transition-colors">
-                Filter
-              </button>
-              <button class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/10 transition-colors">
-                Sort by &or;
-              </button>
+              <input 
+                type="text" 
+                placeholder="Search targets..." 
+                class="bg-[#181818] border border-[#333333] rounded px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-[#f59e0b]"
+              >
+              <button class="md-btn-outlined py-1 px-3 text-xs">Filter</button>
+              <button class="md-btn-outlined py-1 px-3 text-xs">Sort by &or;</button>
             </div>
           </div>
 
-          <!-- Activity Data Rows -->
           <div class="overflow-x-auto">
-            <table class="activity-table font-mono">
+            <table class="md-table">
               <thead>
                 <tr>
                   <th>Timestamp</th>
@@ -512,9 +532,9 @@
                   <td class="text-red-400 font-bold truncate max-w-[200px]">demo://fake-bank</td>
                   <td>Credential Harvester</td>
                   <td>cgroup + SSRF Drop</td>
-                  <td class="text-red-400">100% High Risk</td>
+                  <td class="text-red-400">100% Risk</td>
                   <td>State Bank of India</td>
-                  <td><span class="badge-status-blocked">SCAM DETECTED</span></td>
+                  <td><span class="md-chip md-chip-error">SCAM DETECTED</span></td>
                 </tr>
                 <tr class="cursor-pointer" data-url="https://example.com">
                   <td class="text-zinc-400">Live Verified</td>
@@ -523,7 +543,7 @@
                   <td>Full Caged Isolation</td>
                   <td class="text-emerald-400">0% Risk</td>
                   <td>IANA / RFC2606</td>
-                  <td><span class="badge-status-completed">COMPLETED</span></td>
+                  <td><span class="md-chip md-chip-success">COMPLETED</span></td>
                 </tr>
                 <tr class="cursor-pointer" data-url="https://en.wikipedia.org">
                   <td class="text-zinc-400">Live Verified</td>
@@ -532,7 +552,7 @@
                   <td>phishnet Bridge</td>
                   <td class="text-emerald-400">0% Risk</td>
                   <td>Wikimedia</td>
-                  <td><span class="badge-status-completed">COMPLETED</span></td>
+                  <td><span class="md-chip md-chip-success">COMPLETED</span></td>
                 </tr>
               </tbody>
             </table>
@@ -542,47 +562,38 @@
       </div>
 
       <!-- ======================================================== -->
-      <!-- SECTION 2: PRODUCT LANDING PAGE (The Requested Landing Page) -->
+      <!-- VIEW 2: PRODUCT SHOWCASE (Material UI Landing Page) -->
       <!-- ======================================================== -->
       <div id="landingSection" class="hidden space-y-12">
 
         <!-- HERO SECTION -->
-        <div class="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#131622] via-[#0d0f17] to-[#090a0f] border border-white/10 p-8 sm:p-14 text-center space-y-6 shadow-2xl">
-          <!-- Subtle Glow Orbs -->
-          <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-purple-500/15 rounded-full blur-3xl pointer-events-none"></div>
-
-          <!-- Badges -->
-          <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-purple-300">
-            <span class="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
+        <div class="p-8 sm:p-14 md-card text-center space-y-6">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded bg-[#1a1a1a] border border-[#333333] text-xs font-mono text-[#f59e0b]">
+            <span class="w-2 h-2 rounded-full bg-[#f59e0b]"></span>
             <span>VULTR AGENT RUSH &bull; TRACK 01: BLAST RADIUS ZERO</span>
           </div>
 
-          <!-- Headline -->
-          <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-tight">
+          <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-tight">
             Fresh Phish, Fried in a <br>
-            <span class="bg-gradient-to-r from-purple-400 via-amber-300 to-lime-400 bg-clip-text text-transparent">
-              Zero-Blast-Radius Sandbox.
-            </span>
+            <span class="text-[#f59e0b]">Zero-Blast-Radius Sandbox.</span>
           </h1>
 
-          <!-- Subtitle -->
           <p class="text-sm sm:text-base text-zinc-400 max-w-2xl mx-auto leading-relaxed">
             Autonomous agentic phishing detonation inside cgroup-constrained, unprivileged micro-containers.
-            Zero host exposure. Zero persistent state. Instant synthetic threat synthesis powered by Vultr Serverless Inference.
+            Zero host exposure. Zero persistent state. Instant synthetic threat analysis powered by Vultr Serverless Inference.
           </p>
 
-          <!-- CTAs -->
           <div class="flex flex-wrap items-center justify-center gap-4 pt-4">
-            <button id="ctaLaunchBtn" class="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold px-7 py-3.5 rounded-full text-sm transition-all shadow-xl shadow-purple-500/25 active:scale-95">
+            <button id="ctaLaunchBtn" class="md-btn-primary px-7 py-3 text-sm">
               Launch Detonation Console ⚡
             </button>
-            <a href="https://github.com/Vrajesh-sulakhe/PhishnChips" target="_blank" rel="noopener noreferrer" class="px-6 py-3.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-semibold text-zinc-200 transition-colors">
+            <a href="https://github.com/Vrajesh-sulakhe/PhishnChips" target="_blank" rel="noopener noreferrer" class="md-btn-outlined px-6 py-3 text-sm">
               GitHub Repository &nearr;
             </a>
           </div>
         </div>
 
-        <!-- 4 CONTAINMENT GUARANTEES GRID -->
+        <!-- 4 GUARANTEES -->
         <div class="space-y-4">
           <div class="text-center space-y-1">
             <h3 class="text-xl font-bold text-white">Blast Radius Zero Guarantees</h3>
@@ -590,65 +601,65 @@
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="metric-card space-y-2">
+            <div class="md-card space-y-2">
               <span class="text-2xl">🔒</span>
               <h4 class="text-sm font-bold text-white">1. Process Isolation</h4>
               <p class="text-xs text-zinc-400 leading-relaxed">
-                Untrusted sites execute solely inside ephemeral Docker micro-containers. The host VM, file system, and user device are completely insulated.
+                Untrusted code runs strictly inside a throwaway container; the host VM and user device are completely insulated.
               </p>
             </div>
 
-            <div class="metric-card space-y-2">
+            <div class="md-card space-y-2">
               <span class="text-2xl">🛡️</span>
               <h4 class="text-sm font-bold text-white">2. Secret Hygiene</h4>
               <p class="text-xs text-zinc-400 leading-relaxed">
-                Zero API keys, cloud tokens, or private paths enter the container runtime. Threat analysis is synthesized externally on the host control plane.
+                No API keys, credentials, or private paths ever enter the sandbox container runtime.
               </p>
             </div>
 
-            <div class="metric-card space-y-2">
+            <div class="md-card space-y-2">
               <span class="text-2xl">⚡</span>
-              <h4 class="text-sm font-bold text-white">3. Hard Resource Caps</h4>
+              <h4 class="text-sm font-bold text-white">3. Resource Limits</h4>
               <p class="text-xs text-zinc-400 leading-relaxed">
-                Strict Linux cgroups cap memory to 1024MB, CPU to 1.0 vCPU, PIDs to 256, with a hard 45s wall-clock kill switch to eliminate DoS and fork bombs.
+                Hard Linux cgroups cap execution to 1 CPU, 1 GB RAM, 256 PIDs, with a 45s hard wall-clock kill switch.
               </p>
             </div>
 
-            <div class="metric-card space-y-2">
+            <div class="md-card space-y-2">
               <span class="text-2xl">🍟</span>
               <h4 class="text-sm font-bold text-white">4. Lifecycle Discipline</h4>
               <p class="text-xs text-zinc-400 leading-relaxed">
-                Containers are instantly destroyed upon scan completion. Sub-second teardown guarantees no state, cookies, or payloads ever persist.
+                Every container is purged immediately after scan completion. No state persists.
               </p>
             </div>
           </div>
         </div>
 
-        <!-- ARCHITECTURE WALKTHROUGH -->
-        <div class="chart-card space-y-6">
-          <div class="flex items-center justify-between border-b border-white/5 pb-4">
+        <!-- ORCHESTRATION PIPELINE WALKTHROUGH -->
+        <div class="md-card space-y-6">
+          <div class="flex items-center justify-between border-b border-[#242424] pb-4">
             <div>
               <h3 class="text-base font-bold text-white">End-to-End Orchestration Architecture</h3>
               <p class="text-xs text-zinc-400 mt-0.5">Control plane orchestration on Vultr Cloud Compute (Bangalore Region)</p>
             </div>
-            <span class="text-xs font-mono px-3 py-1 rounded-full bg-purple-950/60 text-purple-300 border border-purple-800/80">Vultr vc2-4c-8gb</span>
+            <span class="md-chip md-chip-warning font-mono">Vultr vc2-4c-8gb</span>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono text-xs">
-            <div class="p-4 bg-[#0b0d13] rounded-xl border border-white/5 space-y-1.5">
-              <span class="text-purple-400 font-bold block">1. Client Request</span>
+            <div class="p-4 bg-[#181818] rounded-lg border border-[#2b2b2b] space-y-1.5">
+              <span class="text-[#f59e0b] font-bold block">1. Client Request</span>
               <p class="text-zinc-400 text-[11px]">User dispatches target link via TLS 1.3 reverse proxy (Caddy at 139.84.159.12.sslip.io).</p>
             </div>
-            <div class="p-4 bg-[#0b0d13] rounded-xl border border-white/5 space-y-1.5">
-              <span class="text-amber-400 font-bold block">2. Host Daemon</span>
+            <div class="p-4 bg-[#181818] rounded-lg border border-[#2b2b2b] space-y-1.5">
+              <span class="text-sky-400 font-bold block">2. Host Daemon</span>
               <p class="text-zinc-400 text-[11px]">FastAPI daemon authenticates, checks rate limits, and provisions ephemeral evidence mounts.</p>
             </div>
-            <div class="p-4 bg-[#0b0d13] rounded-xl border border-white/5 space-y-1.5">
-              <span class="text-lime-400 font-bold block">3. phishnet Sandbox</span>
+            <div class="p-4 bg-[#181818] rounded-lg border border-[#2b2b2b] space-y-1.5">
+              <span class="text-emerald-400 font-bold block">3. phishnet Sandbox</span>
               <p class="text-zinc-400 text-[11px]">Headless Chromium runs under runner (10001:10001), --cap-drop=ALL, and iptables SSRF filters.</p>
             </div>
-            <div class="p-4 bg-[#0b0d13] rounded-xl border border-white/5 space-y-1.5">
-              <span class="text-sky-400 font-bold block">4. Vultr AI Synthesis</span>
+            <div class="p-4 bg-[#181818] rounded-lg border border-[#2b2b2b] space-y-1.5">
+              <span class="text-purple-400 font-bold block">4. Vultr AI Synthesis</span>
               <p class="text-zinc-400 text-[11px]">Llama-3 Vision synthesizes DOM structure and screenshots into structured risk verdicts.</p>
             </div>
           </div>
@@ -658,15 +669,15 @@
 
     </div>
 
-    <!-- PATTERN B: Human-in-the-Loop Approval Modal -->
-    <div id="approvalModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-      <div class="max-w-xl w-full bg-[#131620] border-2 border-amber-500 rounded-3xl p-6 sm:p-7 space-y-4 shadow-2xl shadow-amber-500/20">
+    <!-- PATTERN B APPROVAL MODAL -->
+    <div id="approvalModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="max-w-xl w-full bg-[#181818] border-2 border-[#f59e0b] rounded-xl p-6 sm:p-7 space-y-4 shadow-2xl">
         <div class="flex items-start gap-4">
-          <div class="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-xl flex-shrink-0">
+          <div class="w-10 h-10 rounded-lg bg-[#2a1e0d] border border-[#f59e0b]/50 flex items-center justify-center text-xl flex-shrink-0">
             ⚠️
           </div>
           <div>
-            <h3 class="text-sm font-bold text-amber-400 tracking-wider font-mono uppercase">Human Authorization Gate (Pattern B)</h3>
+            <h3 class="text-sm font-bold text-[#f59e0b] tracking-wider font-mono uppercase">Human Authorization Gate (Pattern B)</h3>
             <p class="text-xs text-zinc-300 mt-2 leading-relaxed">
               <strong>Credential Harvester Detected:</strong> The target page requests sensitive credentials (Password / OTP / UPI PIN).
             </p>
@@ -676,11 +687,11 @@
           </div>
         </div>
 
-        <div class="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 border-t border-white/10">
-          <button id="denyBtn" class="w-full sm:w-auto px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono font-semibold rounded-full text-xs transition-colors">
+        <div class="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 border-t border-[#2b2b2b]">
+          <button id="denyBtn" class="w-full sm:w-auto md-btn-outlined text-xs">
             Terminate &amp; Finalize Verdict
           </button>
-          <button id="approveBtn" class="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-mono font-bold rounded-full text-xs transition-colors shadow-lg shadow-amber-500/20">
+          <button id="approveBtn" class="w-full sm:w-auto md-btn-primary text-xs">
             <span>Authorize Decoy Submit</span>
             <span>&rarr;</span>
           </button>
@@ -688,16 +699,16 @@
       </div>
     </div>
 
-    <!-- Image Zoom Modal -->
-    <div id="zoomModal" class="hidden fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <!-- FULLSCREEN IMAGE ZOOM MODAL -->
+    <div id="zoomModal" class="hidden fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div class="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center">
-        <button id="closeModalBtn" class="absolute -top-10 right-0 text-white text-xl font-mono hover:text-amber-400">&times; Close</button>
-        <img id="modalImg" src="" alt="Full Capture" class="max-w-full max-h-[85vh] object-contain rounded-2xl border border-white/20">
+        <button id="closeModalBtn" class="absolute -top-10 right-0 text-white text-xl font-mono hover:text-[#f59e0b]">&times; Close</button>
+        <img id="modalImg" src="" alt="Full Capture" class="max-w-full max-h-[85vh] object-contain rounded-lg border border-[#333333]">
       </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="text-center text-xs text-zinc-600 py-6 border-t border-white/5 font-mono">
+    <!-- FOOTER -->
+    <footer class="text-center text-xs text-zinc-600 py-6 border-t border-[#1f1f1f] font-mono">
       Phish&amp;Chips &bull; Vultr Agent Rush Hackathon &bull; Track 01: Blast Radius Zero
     </footer>
 
