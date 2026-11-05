@@ -1,4 +1,4 @@
-// app.js - Real-Time Control Plane, SSE Stream Listener & Pattern B Engine for Phish&Chips
+// app.js - Luxury Bento Dashboard Controller & Real-Time Orchestrator for Phish&Chips
 
 let currentJobId = null;
 let eventSource = null;
@@ -20,12 +20,19 @@ const approveBtn = document.getElementById('approveBtn');
 const denyBtn = document.getElementById('denyBtn');
 const pipelineStatusText = document.getElementById('pipelineStatusText');
 const sseIndicator = document.getElementById('sseIndicator');
+const clearWorkspaceBtn = document.getElementById('clearWorkspaceBtn');
+const quickSbiBtn = document.getElementById('quickSbiBtn');
+const inspectPhishnetBtn = document.getElementById('inspectPhishnetBtn');
+const viewPerimeterBtn = document.getElementById('viewPerimeterBtn');
+const refreshHealthBtn = document.getElementById('refreshHealthBtn');
 
-// Pipeline Nodes
+// Pipeline Timeline Nodes (6 nodes along the timeline ruler)
 const nodeUser = document.getElementById('nodeUser');
 const nodeHost = document.getElementById('nodeHost');
 const nodeSandbox = document.getElementById('nodeSandbox');
+const nodeInspector = document.getElementById('nodeInspector');
 const nodeInference = document.getElementById('nodeInference');
+const nodeDone = document.getElementById('nodeDone');
 
 // Verdict Card Elements
 const verdictCard = document.getElementById('verdictCard');
@@ -45,10 +52,8 @@ const zoomModal = document.getElementById('zoomModal');
 const modalImg = document.getElementById('modalImg');
 const closeModalBtn = document.getElementById('closeModalBtn');
 
-// Control Plane Status Elements
+// Control Plane Telemetry Elements
 const slotsBadge = document.getElementById('slotsBadge');
-const netBadge = document.getElementById('netBadge');
-const inferenceBadge = document.getElementById('inferenceBadge');
 
 // Translations Catalog
 const LOCALIZATIONS = {
@@ -87,9 +92,9 @@ async function fetchControlPlaneHealth() {
     const res = await fetch('/api/health');
     if (!res.ok) return;
     const data = await res.json();
-    if (slotsBadge) slotsBadge.innerText = data.slots_display || `${data.active_sandboxes} / ${data.max_sandboxes} Sandboxes Active`;
-    if (netBadge) netBadge.innerText = "phishnet: Enforced";
-    if (inferenceBadge) inferenceBadge.innerText = data.inference_status.includes("Connected") ? "Inference: Connected" : "Inference: Standby";
+    if (slotsBadge) {
+      slotsBadge.innerText = data.slots_display || `${data.active_sandboxes || 0} / ${data.max_sandboxes || 3} Allocated`;
+    }
   } catch (err) {
     console.error("Health check error:", err);
   }
@@ -98,6 +103,40 @@ async function fetchControlPlaneHealth() {
 fetchControlPlaneHealth();
 setInterval(fetchControlPlaneHealth, 5000);
 
+if (refreshHealthBtn) {
+  refreshHealthBtn.addEventListener('click', () => {
+    fetchControlPlaneHealth();
+  });
+}
+
+// Nav Tab Click Handlers
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('nav-tab-active'));
+    tab.classList.add('nav-tab-active');
+  });
+});
+
+// Quick Action Buttons
+if (quickSbiBtn) {
+  quickSbiBtn.addEventListener('click', () => {
+    targetUrlInput.value = 'demo://fake-bank';
+    scanForm.dispatchEvent(new Event('submit', { cancelable: true }));
+  });
+}
+
+function scrollToPerimeter() {
+  const visCard = document.querySelector('.visualizer-card');
+  if (visCard) {
+    visCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    visCard.classList.add('ring-2', 'ring-amber-400');
+    setTimeout(() => visCard.classList.remove('ring-2', 'ring-amber-400'), 1500);
+  }
+}
+
+if (inspectPhishnetBtn) inspectPhishnetBtn.addEventListener('click', scrollToPerimeter);
+if (viewPerimeterBtn) viewPerimeterBtn.addEventListener('click', scrollToPerimeter);
+
 // Preset Buttons
 document.querySelectorAll('.preset-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -105,15 +144,40 @@ document.querySelectorAll('.preset-btn').forEach(btn => {
   });
 });
 
-// Image Modal Listeners
-primaryShot.addEventListener('click', () => {
-  if (primaryShot.src && !primaryShot.src.endsWith('/')) {
-    modalImg.src = primaryShot.src;
-    zoomModal.classList.remove('hidden');
-  }
-});
+// Reset Session
+if (clearWorkspaceBtn) {
+  clearWorkspaceBtn.addEventListener('click', () => {
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
+    targetUrlInput.value = '';
+    detonationWorkspace.classList.add('hidden');
+    verdictCard.classList.add('hidden');
+    approvalModal.classList.add('hidden');
+    resetPipelineNodes();
+    pipelineStatusText.innerText = 'Real-Time Orchestration Pipeline';
+    terminalLog.innerHTML = '<div class="terminal-line text-zinc-600 font-mono">Waiting for sandbox detonation...</div>';
+    primaryShot.src = '';
+    shotCountSpan.innerText = '0 captures';
+    totalEventCount = 0;
+    eventCountSpan.innerText = '0 events';
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = `<span>Detonate in Sandbox</span> <span>⚡</span>`;
+  });
+}
 
-closeModalBtn.addEventListener('click', () => zoomModal.classList.add('hidden'));
+// Image Zoom Modal Listeners
+if (primaryShot) {
+  primaryShot.addEventListener('click', () => {
+    if (primaryShot.src && !primaryShot.src.endsWith('/')) {
+      modalImg.src = primaryShot.src;
+      zoomModal.classList.remove('hidden');
+    }
+  });
+}
+
+if (closeModalBtn) closeModalBtn.addEventListener('click', () => zoomModal.classList.add('hidden'));
 zoomModal.addEventListener('click', (e) => {
   if (e.target === zoomModal) zoomModal.classList.add('hidden');
 });
@@ -134,7 +198,7 @@ document.querySelectorAll('.lang-btn').forEach(btn => {
   });
 });
 
-// 2. Scan Submission & EventSource (SSE) Integration
+// 2. Scan Submission & SSE Connection
 scanForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const url = targetUrlInput.value.trim();
@@ -145,7 +209,7 @@ scanForm.addEventListener('submit', async (e) => {
     eventSource = null;
   }
 
-  // Reset UI State
+  // Reset UI State for Detonation
   submitBtn.disabled = true;
   submitBtn.innerHTML = `<span>Detonating...</span> <span class="animate-spin">⏳</span>`;
   detonationWorkspace.classList.remove('hidden');
@@ -159,8 +223,8 @@ scanForm.addEventListener('submit', async (e) => {
 
   // Animate Pipeline Start
   resetPipelineNodes();
-  nodeUser.classList.add('completed');
-  nodeHost.classList.add('active');
+  setNodeState(nodeUser, 'completed');
+  setNodeState(nodeHost, 'active');
   pipelineStatusText.innerText = 'DISPATCHING TO EPHEMERAL DETONATION CHAMBER...';
 
   try {
@@ -240,6 +304,9 @@ function handleStreamEvent(ev) {
 
   if (ev.message && ev.message.includes('🍟')) {
     msgSpan.innerHTML = `<span class="terminal-fries">${ev.message}</span>`;
+  } else if (ev.message && ev.message.includes('Blocked')) {
+    msgSpan.className = 'font-mono text-amber-300 font-semibold text-xs flex-1 break-words';
+    msgSpan.innerText = ev.message;
   } else {
     msgSpan.innerText = ev.message || '';
   }
@@ -286,40 +353,53 @@ function getBadgeLabel(stage) {
   }
 }
 
-// 4. Pipeline Node Graph Animation Updates
+// 4. Pipeline Timeline Animation Updates
+function setNodeState(node, state) {
+  if (!node) return;
+  node.classList.remove('active', 'completed', 'warning');
+  if (state) node.classList.add(state);
+}
+
 function updatePipelineNodes(stage, message) {
   if (stage === 'SANDBOX_INIT') {
-    nodeHost.classList.remove('active');
-    nodeHost.classList.add('completed');
-    nodeSandbox.classList.add('active');
-    pipelineStatusText.innerText = 'SANDBOX CAGED & DETONATING IN CHROMIUM...';
+    setNodeState(nodeHost, 'completed');
+    setNodeState(nodeSandbox, 'active');
+    pipelineStatusText.innerText = 'CAGED CONTAINER SPAWNED (phishnet 172.30.0.0/16)...';
+  } else if (stage === 'CAP_DROP') {
+    setNodeState(nodeSandbox, 'completed');
+    setNodeState(nodeInspector, 'active');
+  } else if (stage === 'NAVIGATING') {
+    setNodeState(nodeInspector, 'active');
+    pipelineStatusText.innerText = 'HEADLESS CHROMIUM NAVIGATING TARGET LINK...';
   } else if (stage === 'INTERCEPT') {
-    nodeSandbox.classList.add('warning');
-    pipelineStatusText.innerText = '⚠️ CONTAINMENT MOMENT: UNTRUSTED PROBE BLOCKED BY CAGED BOUNDARIES';
+    setNodeState(nodeInspector, 'warning');
+    pipelineStatusText.innerText = '⚠️ CONTAINMENT TRIGGERED: UNTRUSTED SSRF/DOWNLOAD BLOCKED';
+  } else if (stage === 'EVIDENCE_COLLECTED') {
+    setNodeState(nodeInspector, 'completed');
   } else if (stage === 'AWAITING_APPROVAL') {
-    nodeSandbox.classList.add('warning');
+    setNodeState(nodeInspector, 'warning');
     approvalModal.classList.remove('hidden');
-    pipelineStatusText.innerText = 'PAUSED: AWAITING HUMAN IN-THE-LOOP AUTHORIZATION (PATTERN B)';
+    pipelineStatusText.innerText = 'PAUSED: AWAITING HUMAN AUTHORIZATION (PATTERN B)';
   } else if (stage === 'P2_INIT') {
     approvalModal.classList.add('hidden');
-    nodeSandbox.classList.remove('warning');
-    nodeSandbox.classList.add('active');
-    pipelineStatusText.innerText = 'INJECTING DECOY CREDENTIALS IN SECOND CONTAINER PASS...';
+    setNodeState(nodeInspector, 'active');
+    pipelineStatusText.innerText = 'INJECTING DECOY CANARY VALUES IN SANDBOX PASS...';
   } else if (stage === 'INFERENCE_DISPATCH') {
-    nodeSandbox.classList.remove('active', 'warning');
-    nodeSandbox.classList.add('completed');
-    nodeInference.classList.add('active');
-    pipelineStatusText.innerText = 'DISPATCHING DETONATION FORENSICS TO VULTR SERVERLESS INFERENCE...';
+    setNodeState(nodeInspector, 'completed');
+    setNodeState(nodeInference, 'active');
+    pipelineStatusText.innerText = 'DISPATCHING FORENSICS TO VULTR SERVERLESS INFERENCE...';
   } else if (stage === 'DONE') {
-    nodeInference.classList.remove('active');
-    nodeInference.classList.add('completed');
-    pipelineStatusText.innerText = '🍟 DETONATION COMPLETE & SANDBOX PURGED';
+    setNodeState(nodeInference, 'completed');
+    setNodeState(nodeDone, 'completed');
+    pipelineStatusText.innerText = '🍟 PHISH FRIED. SANDBOX DESTROYED & PURGED.';
   }
 }
 
 function resetPipelineNodes() {
-  [nodeUser, nodeHost, nodeSandbox, nodeInference].forEach(node => {
-    node.className = 'pipeline-node';
+  [nodeUser, nodeHost, nodeSandbox, nodeInspector, nodeInference, nodeDone].forEach(node => {
+    if (node) {
+      node.classList.remove('active', 'completed', 'warning');
+    }
   });
 }
 
@@ -395,19 +475,19 @@ function renderVerdict(result) {
   if (verdict === 'SCAM') {
     verdictHeading.innerText = loc.scam;
     verdictHeading.className = 'text-2xl font-extrabold tracking-tight font-mono text-red-500';
-    verdictBadge.className = 'mt-1 inline-block px-2.5 py-0.5 text-xs font-bold rounded font-mono bg-red-950 text-red-300 border border-red-700';
+    verdictBadge.className = 'mt-1 inline-block px-3 py-0.5 text-xs font-bold rounded-full font-mono bg-red-950 text-red-300 border border-red-700';
     verdictBadge.innerText = '🔴 ' + loc.scam;
     escalationDrawer.classList.remove('hidden');
   } else if (verdict === 'SUSPICIOUS') {
     verdictHeading.innerText = loc.suspicious;
     verdictHeading.className = 'text-2xl font-extrabold tracking-tight font-mono text-amber-500';
-    verdictBadge.className = 'mt-1 inline-block px-2.5 py-0.5 text-xs font-bold rounded font-mono bg-amber-950 text-amber-300 border border-amber-700';
+    verdictBadge.className = 'mt-1 inline-block px-3 py-0.5 text-xs font-bold rounded-full font-mono bg-amber-950 text-amber-300 border border-amber-700';
     verdictBadge.innerText = '🟡 ' + loc.suspicious;
     escalationDrawer.classList.remove('hidden');
   } else {
     verdictHeading.innerText = loc.safe;
     verdictHeading.className = 'text-2xl font-extrabold tracking-tight font-mono text-emerald-400';
-    verdictBadge.className = 'mt-1 inline-block px-2.5 py-0.5 text-xs font-bold rounded font-mono bg-emerald-950 text-emerald-300 border border-emerald-700';
+    verdictBadge.className = 'mt-1 inline-block px-3 py-0.5 text-xs font-bold rounded-full font-mono bg-emerald-950 text-emerald-300 border border-emerald-700';
     verdictBadge.innerText = '🟢 ' + loc.safe;
     escalationDrawer.classList.add('hidden');
   }
@@ -426,7 +506,7 @@ function renderVerdict(result) {
     targetedDataList.innerHTML = '';
     result.asks_for.forEach(item => {
       const tag = document.createElement('span');
-      tag.className = 'px-2 py-0.5 bg-red-900/40 text-red-300 border border-red-800 rounded text-[11px] font-mono font-medium';
+      tag.className = 'px-2.5 py-0.5 bg-red-900/40 text-red-300 border border-red-800 rounded-full text-[11px] font-mono font-medium';
       tag.innerText = item;
       targetedDataList.appendChild(tag);
     });
