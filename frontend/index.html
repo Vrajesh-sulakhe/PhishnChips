@@ -33,14 +33,14 @@
 
       <!-- Navigation Menu -->
       <nav class="space-y-1">
-        <button class="sidebar-nav-item active" data-nav="dashboard">
-          <svg class="w-4 h-4 text-[#f59e0b] flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
-          <span>Dashboard</span>
+        <button class="sidebar-nav-item active" data-nav="landing">
+          <svg class="w-4 h-4 text-[#f59e0b] flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+          <span>What is Phish&amp;Chips?</span>
         </button>
 
-        <button class="sidebar-nav-item" data-nav="landing">
-          <svg class="w-4 h-4 text-zinc-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
-          <span>Product Overview</span>
+        <button class="sidebar-nav-item" data-nav="dashboard">
+          <svg class="w-4 h-4 text-zinc-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+          <span>Detonation Console</span>
         </button>
 
         <!-- Nested Containment Group -->
@@ -48,13 +48,13 @@
           <div class="px-3 py-1.5 text-[11px] font-bold text-zinc-500 uppercase tracking-wider font-mono">
             Containment
           </div>
-          <button class="sidebar-sub-item active" data-nav="dashboard" data-anchor="detonation">
+          <button class="sidebar-sub-item" data-nav="dashboard" data-anchor="detonation">
             &bull; Detonation Chamber
           </button>
           <button class="sidebar-sub-item" data-nav="dashboard" data-anchor="activity">
             &bull; Live Activity &amp; Terminal
           </button>
-          <button class="sidebar-sub-item" data-nav="landing" data-anchor="architecture">
+          <button class="sidebar-sub-item active" data-nav="landing" data-anchor="architecture">
             &bull; Architecture Specs
           </button>
         </div>
@@ -103,15 +103,15 @@
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
 
-        <h2 id="topbarTitle" class="text-xl font-bold text-white tracking-tight">Overview</h2>
+        <h2 id="topbarTitle" class="text-xl font-bold text-white tracking-tight">What is Phish&amp;Chips?</h2>
 
         <!-- Mode Toggle Switcher -->
         <div class="hidden sm:flex items-center p-0.5 bg-[#141414] rounded-lg border border-[#282828] ml-4 text-xs font-mono">
-          <button id="viewDashboardBtn" class="px-3 py-1 rounded bg-[#242424] text-white font-semibold">
-            Detonation Console
+          <button id="viewLandingBtn" class="px-3.5 py-1 rounded bg-[#242424] text-white font-semibold transition-all">
+            🏠 What is Phish&amp;Chips?
           </button>
-          <button id="viewLandingBtn" class="px-3 py-1 rounded text-zinc-400 hover:text-white">
-            Product Showcase
+          <button id="viewDashboardBtn" class="px-3.5 py-1 rounded text-zinc-400 hover:text-white transition-all">
+            ⚡ Detonation Console
           </button>
         </div>
       </div>
@@ -171,7 +171,7 @@
       <!-- ======================================================== -->
       <!-- VIEW 1: DETONATION CONSOLE (MATERIAL DASHBOARD)          -->
       <!-- ======================================================== -->
-      <div id="dashboardSection" class="space-y-6">
+      <div id="dashboardSection" class="hidden space-y-6">
 
         <!-- 4 TOP METRIC CARDS -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -604,7 +604,7 @@
       <!-- ======================================================== -->
       <!-- VIEW 2: PRODUCT SHOWCASE (MATERIALISTIC LANDING PAGE)    -->
       <!-- ======================================================== -->
-      <div id="landingSection" class="hidden space-y-12">
+      <div id="landingSection" class="space-y-12">
 
         <!-- ANIMATED HERO SECTION -->
         <div class="p-8 sm:p-14 md-card text-center space-y-6 landing-grid-bg relative overflow-hidden">
@@ -622,9 +622,9 @@
           </h1>
 
           <!-- Crisp Subtitle -->
-          <p class="text-sm sm:text-base text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-            Unprivileged, cgroup-constrained Chromium micro-containers. Zero host exposure.
-            Intercepts credential harvesting, drops SSRF exfiltration to cloud metadata, and synthesizes visual threats via Vultr Serverless Inference.
+          <p class="text-sm sm:text-base text-zinc-300 max-w-2xl mx-auto leading-relaxed">
+            Phish&amp;Chips intercepts malicious URLs before they compromise users or infrastructure.
+            Every link is detonated inside an ephemeral, cgroup-constrained Chromium micro-container with strict kernel isolation, zero host access, and automated threat synthesis via Vultr Serverless Inference.
           </p>
 
           <!-- Interactive Quick Scan Bar on Hero -->
@@ -633,7 +633,7 @@
               <input 
                 id="heroTargetUrl"
                 type="text" 
-                placeholder="Paste suspicious target link to detonate..." 
+                placeholder="Paste suspicious target link (e.g. fake KYC, bank lure, UPI scam)..." 
                 class="flex-1 bg-black border border-[#2b2b2b] rounded-lg px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 font-mono focus:outline-none focus:border-[#f59e0b]"
               >
               <button id="heroDetonateBtn" class="md-btn-primary px-6 py-2.5 text-xs font-bold whitespace-nowrap">
@@ -641,13 +641,13 @@
               </button>
             </div>
             
-            <div class="flex flex-wrap items-center justify-center gap-2 pt-3 text-xs font-mono text-zinc-500">
-              <span>Quick tests:</span>
-              <button class="hero-preset hover:text-white" data-url="demo://fake-bank">🔴 Fake Bank Scam</button>
+            <div class="flex flex-wrap items-center justify-center gap-2 pt-3 text-xs font-mono text-zinc-400">
+              <span class="text-zinc-500">Live Canary Presets:</span>
+              <button class="hero-preset hover:text-white px-2 py-0.5 rounded bg-[#2a1313] border border-red-900 text-red-300 font-semibold" data-url="demo://fake-bank">🔴 Fake Bank Scam (SSRF + Malware)</button>
               <span>&bull;</span>
-              <button class="hero-preset hover:text-white" data-url="https://example.com">🟢 Example.com</button>
+              <button class="hero-preset hover:text-white px-2 py-0.5 rounded bg-[#161616] border border-[#2b2b2b] text-zinc-300" data-url="https://example.com">🟢 Example.com (Safe)</button>
               <span>&bull;</span>
-              <button class="hero-preset hover:text-white" data-url="https://en.wikipedia.org">🟢 Wikipedia</button>
+              <button class="hero-preset hover:text-white px-2 py-0.5 rounded bg-[#161616] border border-[#2b2b2b] text-zinc-300" data-url="https://en.wikipedia.org">🟢 Wikipedia (Safe)</button>
             </div>
           </div>
 
@@ -662,6 +662,97 @@
             <a href="https://github.com/Vrajesh-sulakhe/PhishnChips" target="_blank" rel="noopener noreferrer" class="md-btn-outlined px-6 py-3 text-sm">
               GitHub Repository &nearr;
             </a>
+          </div>
+        </div>
+
+        <!-- WHAT IS PHISH&CHIPS? (DEEP DIVE EXPLANATION) -->
+        <div class="md-card space-y-6">
+          <div class="border-b border-[#242424] pb-4">
+            <span class="text-xs font-bold font-mono text-[#f59e0b] uppercase tracking-wider">Platform Overview</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-white mt-1">What is Phish&amp;Chips?</h2>
+            <p class="text-xs sm:text-sm text-zinc-400 mt-1 max-w-3xl leading-relaxed">
+              Phish&amp;Chips is an autonomous, agentic cybersecurity system built for Track 01 (Blast Radius Zero) of the Vultr Agent Rush Hackathon. It replaces passive URL scanners with active, containment-first runtime sandboxes.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <!-- Pillar 1 -->
+            <div class="p-4 rounded-xl bg-[#141414] border border-[#252525] space-y-2.5">
+              <div class="w-8 h-8 rounded-lg bg-[#241a0d] border border-[#f59e0b]/40 flex items-center justify-center text-sm">
+                💥
+              </div>
+              <h3 class="text-sm font-bold text-white">The Phishing Crisis</h3>
+              <p class="text-xs text-zinc-400 leading-relaxed">
+                Modern cyber attacks use dynamic Single Page Applications (SPAs), OTP interceptors, and automated drive-by downloads. Static domain blocklists fail because fraudulent links only live for a few hours.
+              </p>
+            </div>
+
+            <!-- Pillar 2 -->
+            <div class="p-4 rounded-xl bg-[#141414] border border-[#252525] space-y-2.5">
+              <div class="w-8 h-8 rounded-lg bg-[#0d2417] border border-emerald-500/40 flex items-center justify-center text-sm">
+                🛡️
+              </div>
+              <h3 class="text-sm font-bold text-white">Blast Radius Zero</h3>
+              <p class="text-xs text-zinc-400 leading-relaxed">
+                Rather than checking DNS records, Phish&amp;Chips fires up a throwaway, hardware-throttled Linux container within milliseconds. Kernel-level iptables cut off host networks and cloud metadata access.
+              </p>
+            </div>
+
+            <!-- Pillar 3 -->
+            <div class="p-4 rounded-xl bg-[#141414] border border-[#252525] space-y-2.5">
+              <div class="w-8 h-8 rounded-lg bg-[#181124] border border-purple-500/40 flex items-center justify-center text-sm">
+                🧠
+              </div>
+              <h3 class="text-sm font-bold text-white">Pattern B &amp; Vultr AI</h3>
+              <p class="text-xs text-zinc-400 leading-relaxed">
+                When login forms are detected, human-in-the-loop authorization gates inject synthetic decoy canaries to track exfiltration routes. Vultr Serverless Inference (Llama-3 Vision) synthesizes verdicts in real-time.
+              </p>
+            </div>
+          </div>
+
+          <!-- Comparison Table: Traditional vs Phish&Chips -->
+          <div class="pt-4 border-t border-[#242424]">
+            <h4 class="text-xs font-bold text-zinc-300 uppercase tracking-wider font-mono mb-3">
+              How Phish&amp;Chips Compares to Traditional URL Tools
+            </h4>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs font-mono text-left">
+                <thead>
+                  <tr class="text-zinc-500 border-b border-[#252525]">
+                    <th class="py-2 pr-4">Security Capability</th>
+                    <th class="py-2 pr-4 text-zinc-400">Traditional URL Scanners</th>
+                    <th class="py-2 text-[#f59e0b]">Phish&amp;Chips Autonomous Engine</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-[#1e1e1e] text-zinc-300">
+                  <tr>
+                    <td class="py-2.5 font-semibold text-white">Execution Model</td>
+                    <td class="py-2.5 text-zinc-500">Static Regex &amp; Known DNS Feeds</td>
+                    <td class="py-2.5 text-emerald-400">Live Active Headless Chromium Detonation</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2.5 font-semibold text-white">Host Blast Radius</td>
+                    <td class="py-2.5 text-red-400">High Risk (Host or User Browser exposed)</td>
+                    <td class="py-2.5 text-emerald-400">Zero (cgroups + cap-drop=ALL + iptables)</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2.5 font-semibold text-white">Cloud Metadata SSRF</td>
+                    <td class="py-2.5 text-zinc-500">Unfiltered / Ignored</td>
+                    <td class="py-2.5 text-emerald-400">Blocked: 169.254.169.254 strictly dropped</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2.5 font-semibold text-white">Form Exfiltration Tracing</td>
+                    <td class="py-2.5 text-zinc-500">None (Passive reading only)</td>
+                    <td class="py-2.5 text-amber-300">Active Decoy Infiltration (Pattern B Gate)</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2.5 font-semibold text-white">Emergency Response</td>
+                    <td class="py-2.5 text-zinc-500">Generic score without escalation</td>
+                    <td class="py-2.5 text-[#f59e0b]">Direct 1-Click Indian 1930 &amp; CERT-In Escalation</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 

@@ -87,7 +87,7 @@ def serve_root():
 @app.get("/health")
 @app.get("/api/health")
 def health_check():
-    api_key_set = bool(os.getenv("VULTR_INFERENCE_API_KEY", "").strip())
+    api_key_set = bool(os.getenv("VULTR_INFERENCE_API_KEY", "").strip() or os.getenv("VULTR_API_KEY", "").strip())
     active_sandboxes = scanner.get_active_scans_count()
     max_sandboxes = scanner.get_max_scans()
     return {
@@ -103,6 +103,15 @@ def health_check():
         "inference_status": "Connected (api.vultrinference.com)" if api_key_set else "Standby (Deterministic Heuristics Active)",
         "sandbox_image": "phishchips-sandbox",
         "database": "SQLite 3 (WAL mode)"
+    }
+
+@app.get("/api/config")
+def get_public_config():
+    """Returns safe, public configuration for the frontend client."""
+    return {
+        "google_client_id": os.getenv("GOOGLE_CLIENT_ID", "").strip(),
+        "vultr_inference_active": bool(os.getenv("VULTR_INFERENCE_API_KEY", "").strip() or os.getenv("VULTR_API_KEY", "").strip()),
+        "model": os.getenv("VULTR_MODEL", "llama2-13b-chat")
     }
 
 # --- Authentication Endpoints ---

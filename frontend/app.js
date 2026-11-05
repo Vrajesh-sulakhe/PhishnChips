@@ -113,13 +113,13 @@ function showView(view) {
   if (view === 'dashboard') {
     if (dashboardSection) dashboardSection.classList.remove('hidden');
     if (landingSection) landingSection.classList.add('hidden');
-    if (topbarTitle) topbarTitle.innerText = 'Overview';
+    if (topbarTitle) topbarTitle.innerText = 'Detonation Console';
 
     if (viewDashboardBtn) {
-      viewDashboardBtn.className = 'px-3 py-1 rounded bg-[#242424] text-white font-semibold transition-all';
+      viewDashboardBtn.className = 'px-3.5 py-1 rounded bg-[#242424] text-white font-semibold transition-all';
     }
     if (viewLandingBtn) {
-      viewLandingBtn.className = 'px-3 py-1 rounded text-zinc-400 hover:text-white transition-all';
+      viewLandingBtn.className = 'px-3.5 py-1 rounded text-zinc-400 hover:text-white transition-all';
     }
 
     document.querySelectorAll('.sidebar-nav-item').forEach(item => {
@@ -129,13 +129,13 @@ function showView(view) {
   } else if (view === 'landing') {
     if (dashboardSection) dashboardSection.classList.add('hidden');
     if (landingSection) landingSection.classList.remove('hidden');
-    if (topbarTitle) topbarTitle.innerText = 'Product Showcase';
+    if (topbarTitle) topbarTitle.innerText = 'What is Phish&Chips?';
 
     if (viewLandingBtn) {
-      viewLandingBtn.className = 'px-3 py-1 rounded bg-[#242424] text-white font-semibold transition-all';
+      viewLandingBtn.className = 'px-3.5 py-1 rounded bg-[#242424] text-white font-semibold transition-all';
     }
     if (viewDashboardBtn) {
-      viewDashboardBtn.className = 'px-3 py-1 rounded text-zinc-400 hover:text-white transition-all';
+      viewDashboardBtn.className = 'px-3.5 py-1 rounded text-zinc-400 hover:text-white transition-all';
     }
 
     document.querySelectorAll('.sidebar-nav-item').forEach(item => {
@@ -311,11 +311,26 @@ window.handleGoogleCredentialResponse = async function(response) {
   }
 };
 
-function initGoogleAuth() {
+async function initGoogleAuth() {
+  let clientId = window.GOOGLE_CLIENT_ID || "";
+  try {
+    const res = await fetch('/api/config');
+    if (res.ok) {
+      const cfg = await res.json();
+      if (cfg.google_client_id) {
+        clientId = cfg.google_client_id;
+      }
+    }
+  } catch (e) {}
+
+  if (!clientId) {
+    clientId = "753820984920-placeholder.apps.googleusercontent.com";
+  }
+
   if (window.google && window.google.accounts && window.google.accounts.id) {
     try {
       window.google.accounts.id.initialize({
-        client_id: "273819837492-placeholder.apps.googleusercontent.com",
+        client_id: clientId,
         callback: window.handleGoogleCredentialResponse,
         auto_select: false
       });
@@ -836,15 +851,21 @@ function renderVerdict(result) {
 }
 
 // 9. Initial Page Load Execution
-document.addEventListener('DOMContentLoaded', () => {
+function initApp() {
+  const hash = window.location.hash;
+  if (hash === '#console' || hash === '#dashboard') {
+    showView('dashboard');
+  } else {
+    showView('landing');
+  }
   checkAuthSession();
   loadRecentScans();
   initGoogleAuth();
-});
+}
+
+document.addEventListener('DOMContentLoaded', initApp);
 
 // Run immediate initialization if DOM is already ready
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  checkAuthSession();
-  loadRecentScans();
-  initGoogleAuth();
+  initApp();
 }

@@ -16,8 +16,9 @@ from heuristics import evaluate_heuristics
 load_dotenv()
 
 def get_vultr_config():
+    api_key = os.getenv("VULTR_INFERENCE_API_KEY") or os.getenv("VULTR_API_KEY", "")
     return {
-        "api_key": os.getenv("VULTR_INFERENCE_API_KEY", "").strip(),
+        "api_key": api_key.strip(),
         "base_url": os.getenv("VULTR_INFERENCE_BASE_URL", "https://api.vultrinference.com/v1").strip(),
         "model": os.getenv("VULTR_MODEL", "llama2-13b-chat").strip()
     }
