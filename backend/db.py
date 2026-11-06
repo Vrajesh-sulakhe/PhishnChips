@@ -267,3 +267,4 @@ def get_analytics_summary() -> Dict[str, Any]:
             "suspicious_flagged": suspicious_count,
             "total_users": max(total_users, 1)
         }
+

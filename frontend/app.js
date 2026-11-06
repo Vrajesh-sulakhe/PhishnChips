@@ -116,10 +116,10 @@ function showView(view) {
     if (topbarTitle) topbarTitle.innerText = 'Detonation Console';
 
     if (viewDashboardBtn) {
-      viewDashboardBtn.className = 'px-3.5 py-1 rounded bg-[#242424] text-white font-semibold transition-all';
+      viewDashboardBtn.classList.add('active');
     }
     if (viewLandingBtn) {
-      viewLandingBtn.className = 'px-3.5 py-1 rounded text-zinc-400 hover:text-white transition-all';
+      viewLandingBtn.classList.remove('active');
     }
 
     document.querySelectorAll('.sidebar-nav-item').forEach(item => {
@@ -132,10 +132,10 @@ function showView(view) {
     if (topbarTitle) topbarTitle.innerText = 'What is Phish&Chips?';
 
     if (viewLandingBtn) {
-      viewLandingBtn.className = 'px-3.5 py-1 rounded bg-[#242424] text-white font-semibold transition-all';
+      viewLandingBtn.classList.add('active');
     }
     if (viewDashboardBtn) {
-      viewDashboardBtn.className = 'px-3.5 py-1 rounded text-zinc-400 hover:text-white transition-all';
+      viewDashboardBtn.classList.remove('active');
     }
 
     document.querySelectorAll('.sidebar-nav-item').forEach(item => {
@@ -679,11 +679,35 @@ function handleStreamEvent(ev) {
   terminalLog.appendChild(line);
   terminalLog.scrollTop = terminalLog.scrollHeight;
 
+  // Update real-time pipeline node graph
+  updatePipelineNodes(ev.stage);
+
   // Pattern B Human-in-the-Loop check
   if (ev.stage === 'AWAITING_APPROVAL') {
     approvalModal.classList.remove('hidden');
   } else if (ev.stage === 'P2_INIT') {
     approvalModal.classList.add('hidden');
+  }
+}
+
+function updatePipelineNodes(stage) {
+  const nClient = document.getElementById('nodeClient');
+  const nHost = document.getElementById('nodeHost');
+  const nSandbox = document.getElementById('nodeSandbox');
+  const nInference = document.getElementById('nodeInference');
+  if (!nClient || !nHost || !nSandbox || !nInference) return;
+
+  [nClient, nHost, nSandbox, nInference].forEach(n => n.classList.remove('active'));
+
+  if (stage === 'SANDBOX_INIT') {
+    nClient.classList.add('active');
+    nHost.classList.add('active');
+  } else if (['CAP_DROP', 'NAVIGATING', 'INTERCEPT', 'EVIDENCE_COLLECTED', 'AWAITING_APPROVAL', 'P2_INIT'].includes(stage)) {
+    nSandbox.classList.add('active');
+  } else if (stage === 'INFERENCE_DISPATCH') {
+    nInference.classList.add('active');
+  } else {
+    nSandbox.classList.add('active');
   }
 }
 

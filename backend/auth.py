@@ -91,3 +91,4 @@ def get_current_user_required(request: Request) -> Dict[str, Any]:
             detail="Authentication required. Please sign in with Google or continue as Demo Analyst."
         )
     return user
+

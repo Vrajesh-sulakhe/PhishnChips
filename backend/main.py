@@ -84,6 +84,14 @@ def serve_root():
         return {"status": "ok", "service": "Phish&Chips Backend (index.html not built yet)"}
     return FileResponse(index_file)
 
+@app.get("/styles.css")
+def serve_styles_root():
+    return FileResponse(FRONTEND_DIR / "styles.css")
+
+@app.get("/app.js")
+def serve_app_js_root():
+    return FileResponse(FRONTEND_DIR / "app.js")
+
 @app.get("/health")
 @app.get("/api/health")
 def health_check():
