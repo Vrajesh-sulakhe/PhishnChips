@@ -68,14 +68,14 @@ export default function App() {
             >
               <Circle className="w-5 h-5 fill-white text-white" />
               <span className="text-xl font-semibold tracking-tight text-white">
-                Aurora
+                Phish&Chips
               </span>
             </motion.div>
 
             {/* Heading Block */}
             <motion.div variants={itemVariants} className="space-y-2">
               <h2 className="text-4xl font-medium tracking-tight whitespace-nowrap text-white">
-                Join Aurora
+                Join Phish&Chips
               </h2>
               <p className="text-white/60 text-sm leading-relaxed px-4">
                 Follow these 3 quick phases to activate your space.
@@ -300,3 +300,4 @@ export function InputGroup({
     </div>
   );
 }
+
