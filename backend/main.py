@@ -64,6 +64,14 @@ app.add_middleware(
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
+assets_dir = BASE_DIR / "assets" if (BASE_DIR / "assets").exists() else FRONTEND_DIR / "assets"
+if assets_dir.exists():
+    app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+fonts_dir = BASE_DIR / "fonts" if (BASE_DIR / "fonts").exists() else FRONTEND_DIR / "fonts"
+if fonts_dir.exists():
+    app.mount("/fonts", StaticFiles(directory=str(fonts_dir)), name="fonts")
+
 class ScanRequest(BaseModel):
     url: str
 
@@ -81,16 +89,47 @@ class DemoAuthRequest(BaseModel):
 def serve_root():
     index_file = FRONTEND_DIR / "index.html"
     if not index_file.exists():
-        return {"status": "ok", "service": "Phish&Chips Backend (index.html not built yet)"}
+        index_file = BASE_DIR / "index.html"
+    if not index_file.exists():
+        return {"status": "ok", "service": "Phish&Chips Backend"}
     return FileResponse(index_file)
 
 @app.api_route("/styles.css", methods=["GET", "HEAD"])
 def serve_styles_root():
-    return FileResponse(FRONTEND_DIR / "styles.css")
+    css_file = FRONTEND_DIR / "styles.css"
+    if not css_file.exists():
+        css_file = BASE_DIR / "styles.css"
+    return FileResponse(css_file)
+
+@app.api_route("/main.js", methods=["GET", "HEAD"])
+def serve_main_js_root():
+    js_file = FRONTEND_DIR / "main.js"
+    if not js_file.exists():
+        js_file = BASE_DIR / "main.js"
+    return FileResponse(js_file)
 
 @app.api_route("/app.js", methods=["GET", "HEAD"])
 def serve_app_js_root():
-    return FileResponse(FRONTEND_DIR / "app.js")
+    js_file = FRONTEND_DIR / "app.js"
+    if not js_file.exists():
+        js_file = BASE_DIR / "app.js"
+    return FileResponse(js_file)
+
+@app.api_route("/console", methods=["GET", "HEAD"])
+@app.api_route("/dashboard", methods=["GET", "HEAD"])
+def serve_console_root():
+    console_file = FRONTEND_DIR / "console.html"
+    if not console_file.exists():
+        console_file = FRONTEND_DIR / "index.html"
+    return FileResponse(console_file)
+
+@app.api_route("/login", methods=["GET", "HEAD"])
+@app.api_route("/signup", methods=["GET", "HEAD"])
+def serve_auth_page():
+    index_file = FRONTEND_DIR / "index.html"
+    if not index_file.exists():
+        index_file = BASE_DIR / "index.html"
+    return FileResponse(index_file)
 
 @app.api_route("/health", methods=["GET", "HEAD"])
 @app.api_route("/api/health", methods=["GET", "HEAD"])

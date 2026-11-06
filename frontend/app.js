@@ -876,8 +876,9 @@ function renderVerdict(result) {
 
 // 9. Initial Page Load Execution
 function initApp() {
+  const path = window.location.pathname;
   const hash = window.location.hash;
-  if (hash === '#console' || hash === '#dashboard') {
+  if (path.includes('console') || path.includes('dashboard') || hash === '#console' || hash === '#dashboard' || !path.includes('landing')) {
     showView('dashboard');
   } else {
     showView('landing');
