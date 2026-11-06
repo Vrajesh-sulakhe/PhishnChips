@@ -101,6 +101,13 @@ def serve_styles_root():
         css_file = BASE_DIR / "styles.css"
     return FileResponse(css_file)
 
+@app.api_route("/console.css", methods=["GET", "HEAD"])
+def serve_console_css_root():
+    css_file = FRONTEND_DIR / "console.css"
+    if not css_file.exists():
+        css_file = BASE_DIR / "console.css"
+    return FileResponse(css_file)
+
 @app.api_route("/main.js", methods=["GET", "HEAD"])
 def serve_main_js_root():
     js_file = FRONTEND_DIR / "main.js"
@@ -117,6 +124,7 @@ def serve_app_js_root():
 
 @app.api_route("/console", methods=["GET", "HEAD"])
 @app.api_route("/dashboard", methods=["GET", "HEAD"])
+@app.api_route("/product", methods=["GET", "HEAD"])
 def serve_console_root():
     console_file = FRONTEND_DIR / "console.html"
     if not console_file.exists():
