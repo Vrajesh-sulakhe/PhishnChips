@@ -92,7 +92,7 @@ html, body {
   justify-content: center;
   width: 100%;
   max-width: 720px;
-  gap: clamp(18px, 2.8vw, 28px);
+  gap: clamp(12px, 1.8vw, 18px);
   flex-shrink: 0;
   animation: slideDown 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -124,16 +124,17 @@ html, body {
 
 /* Nav Pill (White) */
 .nav-pill {
-  height: clamp(44px, 5.2vw, 48px);
-  max-width: 430px;
-  flex: 1;
+  height: clamp(40px, 4.4vw, 46px);
+  width: auto;
+  flex: 0 0 auto;
   background-color: #ffffff;
-  padding: 4px 8px;
+  padding: 3px 6px;
   border-radius: 9999px;
   box-shadow: var(--nav-shadow);
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-around;
+  justify-content: center;
+  gap: 4px;
 }
 
 .nav-link {
@@ -145,9 +146,14 @@ html, body {
   opacity: 0.5;
   text-decoration: none;
   position: relative;
-  padding: 6px 12px;
+  padding: 6px 16px;
+  border-radius: 9999px;
   transition: opacity 0.2s ease;
   display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  white-space: nowrap;
+}
   flex-direction: column;
   align-items: center;
 }
@@ -176,8 +182,8 @@ html, body {
 
 /* Sign In Dark Pill */
 .sign-in-btn {
-  height: clamp(44px, 5.2vw, 48px);
-  padding: 0 clamp(18px, 2.4vw, 24px);
+  height: clamp(40px, 4.4vw, 46px);
+  padding: 0 clamp(16px, 2vw, 22px);
   border-radius: 9999px;
   background-color: var(--pill-dark);
   color: var(--sign-in-text);
