@@ -1,9 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Phish&amp;Chips — Ephemeral Threat Detonation Console</title>
+  <title>Phish&amp;Chips — Ephemeral Detonation Console</title>
 
   <!-- Google Fonts: Inter & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -22,388 +22,504 @@
     referrerpolicy="no-referrer"
   />
 
-  <!-- Minimal Materialistic Stylesheet -->
-  <link rel="stylesheet" href="/console.css" />
-  <link rel="stylesheet" href="/static/console.css" />
+  <!-- Bootstrap 6 CSS (CDN) -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@6.0.0-alpha.1/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+    integrity="sha384-B/GM4XqrwHnWXNOWMbloTmrYXZg10cakYGmpfsR/bbzQ6JAJI4ihuyADKLnBgrCe"
+    crossorigin="anonymous"
+  />
+
+  <!-- Tailwind CSS v4 (Browser CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+  <!-- Bootstrap 6 JS Module (CDN) -->
+  <script
+    type="module"
+    src="https://cdn.jsdelivr.net/npm/bootstrap@6.0.0-alpha.1/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-1a/pXj49ZQ1aHEmrJ+gMw1otqoVsYwlEnlD8mIfY2TV03r20Y0CN7uqx1tQogjPL"
+    crossorigin="anonymous"
+  ></script>
 
   <!-- Google Identity Services (GIS) Client -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- Bridge Stylesheet -->
+  <link rel="stylesheet" href="/console.css" />
+
+  <!-- Dynamic Utility & Framework Bridge Styles -->
+  <style>
+    /* Invariant display toggle */
+    .hidden {
+      display: none !important;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      background-color: #0b0d13;
+      color: #dee2e6;
+    }
+
+    /* Modal Backdrop Bridge */
+    .modal-backdrop-custom {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 1055;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    /* Pipeline Node Glows */
+    .pipeline-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: #495057;
+      transition: all 0.3s ease;
+    }
+    .pipeline-dot.active {
+      background-color: #0d6efd !important;
+      box-shadow: 0 0 10px #0d6efd;
+    }
+
+    /* Terminal & Forensic Log Badges */
+    .terminal-line {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.65rem;
+      padding: 0.25rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+    .terminal-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.15rem 0.45rem;
+      border-radius: 0.25rem;
+      text-transform: uppercase;
+      flex-shrink: 0;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .badge-init { background: rgba(13, 110, 253, 0.2); color: #6ea8fe; }
+    .badge-contain { background: rgba(25, 135, 84, 0.2); color: #75b798; }
+    .badge-intercept { background: rgba(220, 53, 69, 0.2); color: #ea868f; }
+    .badge-evidence { background: rgba(111, 66, 193, 0.2); color: #c29ffa; }
+    .badge-approval { background: rgba(255, 193, 7, 0.2); color: #ffda6a; }
+    .badge-inference { background: rgba(13, 202, 240, 0.2); color: #6edff6; }
+    .badge-done { background: rgba(25, 135, 84, 0.35); color: #20c997; }
+    .terminal-fries { color: #ffc107; font-weight: 600; }
+
+    /* Material Chips populated by app.js */
+    .md-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .md-chip-success {
+      background-color: rgba(25, 135, 84, 0.2);
+      color: #75b798;
+      border: 1px solid rgba(25, 135, 84, 0.4);
+    }
+    .md-chip-warning {
+      background-color: rgba(255, 193, 7, 0.2);
+      color: #ffda6a;
+      border: 1px solid rgba(255, 193, 7, 0.4);
+    }
+    .md-chip-error {
+      background-color: rgba(220, 53, 69, 0.2);
+      color: #ea868f;
+      border: 1px solid rgba(220, 53, 69, 0.4);
+    }
+
+    /* Prevent empty/broken screenshot glyph */
+    #primaryShot:not([src]), #primaryShot[src=""] {
+      display: none !important;
+    }
+    .browser-viewport-box:has(#primaryShot[src]:not([src=""])) .browser-placeholder-box {
+      display: none !important;
+    }
+  </style>
 </head>
-<body>
+<body class="bg-[#0b0d13] text-gray-200 antialiased selection:bg-blue-600 selection:text-white">
 
   <!-- ======================================================== -->
-  <!-- 1. TOP APP BAR                                           -->
+  <!-- 1. BOOTSTRAP 6 + TAILWIND NAVBAR                         -->
   <!-- ======================================================== -->
-  <header class="app-header">
-    <div class="header-inner">
-      <div class="header-left">
-        <a href="/" class="brand-link" title="Return to Landing Page">
-          <img src="/assets/logo.webp" alt="Phish&amp;Chips" class="brand-logo" />
-          <span class="brand-title">Phish<span class="brand-accent">&amp;</span>Chips</span>
+  <nav class="navbar navbar-expand-lg border-b border-white/10 bg-[#12151e]/90 backdrop-blur-md sticky-top py-2.5">
+    <div class="container-xl flex items-center justify-between">
+      <!-- Left: Brand & Breadcrumb -->
+      <div class="flex items-center gap-3">
+        <a href="/" class="navbar-brand m-0 p-0 flex items-center gap-2.5 text-white hover:opacity-90 transition">
+          <img src="/assets/logo.webp" alt="Phish&amp;Chips" width="32" height="32" class="rounded-circle shadow-sm" />
+          <span class="font-bold tracking-tight text-lg">Phish<span class="text-blue-500">&amp;</span>Chips</span>
         </a>
-        <div class="header-divider"></div>
-        <div class="breadcrumbs">
-          <a href="/">Home</a>
-          <span class="breadcrumb-separator">/</span>
-          <span class="breadcrumb-active" id="topbarTitle">Detonation Console</span>
+        <span class="text-white/20">|</span>
+        <div class="d-none d-sm-flex items-center gap-1.5 text-xs text-gray-400">
+          <a href="/" class="hover:text-white transition">Home</a>
+          <span class="text-white/20">&rsaquo;</span>
+          <span class="text-gray-200 font-medium" id="topbarTitle">Detonation Console</span>
         </div>
       </div>
 
-      <div class="header-center">
-        <!-- Navigation View Switcher -->
-        <div class="nav-segment">
-          <button type="button" class="nav-segment-btn active" id="viewDashboardBtn">
-            <i class="fa-solid fa-terminal"></i>
-            <span>Console</span>
+      <!-- Center: Navigation Segment -->
+      <div class="d-none d-md-flex items-center">
+        <div class="nav nav-pills bg-[#090b10] border border-white/10 rounded-pill p-1 gap-1">
+          <button type="button" class="nav-link active rounded-pill px-3 py-1 text-xs font-semibold" id="viewDashboardBtn">
+            <i class="fa-solid fa-terminal me-1"></i> Console
           </button>
-          <a href="/" class="nav-segment-btn" id="viewLandingBtn">
-            <i class="fa-solid fa-house"></i>
-            <span>Landing Page</span>
+          <a href="/" class="nav-link rounded-pill px-3 py-1 text-xs text-gray-400 hover:text-white" id="viewLandingBtn">
+            <i class="fa-solid fa-house me-1"></i> Landing Page
           </a>
-          <button type="button" class="nav-segment-btn" onclick="document.getElementById('recentActivitySection')?.scrollIntoView({behavior: 'smooth'})">
-            <i class="fa-solid fa-clock-rotate-left"></i>
-            <span>Scan History</span>
+          <button type="button" class="nav-link rounded-pill px-3 py-1 text-xs text-gray-400 hover:text-white" onclick="document.getElementById('recentActivitySection')?.scrollIntoView({behavior: 'smooth'})">
+            <i class="fa-solid fa-clock-rotate-left me-1"></i> History
           </button>
         </div>
       </div>
 
-      <div class="header-right">
-        <!-- Control Plane Slots Status -->
-        <div class="system-status-chip" title="Active Docker Micro-Sandboxes in phishnet isolation">
-          <span class="status-pulse-dot"></span>
-          <span class="status-label">Sandboxes:</span>
-          <span class="status-count" id="slotsBadge">0 / 3 Active</span>
+      <!-- Right: Status Badge & Auth -->
+      <div class="flex items-center gap-3">
+        <!-- Sandboxes Slot Status -->
+        <div class="badge bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-pill px-3 py-1.5 flex items-center gap-2 text-xs font-medium">
+          <span class="spinner-grow spinner-grow-sm text-success" role="status" style="width: 7px; height: 7px;"></span>
+          <span class="d-none d-sm-inline text-gray-400">Sandboxes:</span>
+          <span class="font-mono font-bold" id="slotsBadge">0 / 3 Active</span>
         </div>
 
         <!-- Unauthenticated Controls -->
-        <div id="unauthControls" class="auth-btn-group">
-          <button type="button" class="btn-ghost" id="openSignInBtn">
+        <div id="unauthControls" class="flex items-center gap-2">
+          <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 text-xs fw-medium text-gray-300" id="openSignInBtn">
             Sign In
           </button>
-          <button type="button" class="btn-primary-sm" id="openSignUpBtn">
+          <button type="button" class="btn btn-primary btn-sm rounded-pill px-3.5 text-xs fw-semibold" id="openSignUpBtn">
             Get Started
           </button>
         </div>
 
         <!-- Authenticated Profile Capsule -->
-        <div id="authProfileCapsule" class="auth-profile-wrapper hidden">
-          <button type="button" id="userProfileBtn" class="profile-trigger-btn">
-            <img id="userAvatarImg" src="https://api.dicebear.com/7.x/bottts/svg?seed=PhishChips" alt="Avatar" class="user-avatar" />
-            <span id="userNameLabel" class="user-name">SecOps Lead</span>
-            <i class="fa-solid fa-chevron-down profile-chevron"></i>
+        <div id="authProfileCapsule" class="relative hidden">
+          <button type="button" id="userProfileBtn" class="btn btn-outline-secondary btn-sm rounded-pill px-2.5 py-1 flex items-center gap-2 border-white/10 bg-[#161a26]">
+            <img id="userAvatarImg" src="https://api.dicebear.com/7.x/bottts/svg?seed=PhishChips" alt="Avatar" width="22" height="22" class="rounded-circle bg-gray-800" />
+            <span id="userNameLabel" class="text-xs font-semibold text-gray-200 max-w-[100px] truncate">SecOps Lead</span>
+            <i class="fa-solid fa-chevron-down text-[9px] text-gray-400"></i>
           </button>
 
-          <!-- Profile Dropdown Menu -->
-          <div id="userDropdownMenu" class="user-dropdown-menu hidden">
-            <div class="dropdown-header">
-              <div class="dropdown-label">Signed in as</div>
-              <div id="dropdownUserEmail" class="dropdown-email">analyst@phishchips.internal</div>
+          <!-- User Dropdown Menu -->
+          <div id="userDropdownMenu" class="dropdown-menu dropdown-menu-end shadow-2xl border border-white/10 bg-[#161a26] rounded-3 py-2 text-xs min-w-[220px] hidden" style="position: absolute; right: 0; top: calc(100% + 8px); z-index: 1050;">
+            <div class="px-3 py-2 border-b border-white/10">
+              <span class="text-gray-400 text-[10px] uppercase font-bold tracking-wider">Signed in as</span>
+              <div id="dropdownUserEmail" class="text-white font-medium truncate mt-0.5">analyst@phishchips.internal</div>
             </div>
-            <div class="dropdown-divider"></div>
-            <button type="button" id="menuDashboardBtn" class="dropdown-item">
-              <i class="fa-solid fa-terminal"></i>
-              <span>Console Dashboard</span>
+            <button type="button" id="menuDashboardBtn" class="dropdown-item py-2 px-3 text-gray-200 hover:bg-white/5 flex items-center gap-2">
+              <i class="fa-solid fa-terminal text-gray-400"></i> Console Dashboard
             </button>
-            <button type="button" id="menuHistoryBtn" class="dropdown-item">
-              <i class="fa-solid fa-clock-rotate-left"></i>
-              <span>Scan History</span>
+            <button type="button" id="menuHistoryBtn" class="dropdown-item py-2 px-3 text-gray-200 hover:bg-white/5 flex items-center gap-2">
+              <i class="fa-solid fa-clock-rotate-left text-gray-400"></i> Scan History
             </button>
-            <div class="dropdown-divider"></div>
-            <button type="button" id="logoutBtn" class="dropdown-item item-danger">
-              <i class="fa-solid fa-arrow-right-from-bracket"></i>
-              <span>Sign Out</span>
+            <div class="dropdown-divider border-white/10 my-1"></div>
+            <button type="button" id="logoutBtn" class="dropdown-item py-2 px-3 text-danger hover:bg-danger/10 flex items-center gap-2 font-semibold">
+              <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out
             </button>
           </div>
         </div>
       </div>
     </div>
-  </header>
+  </nav>
 
   <!-- ======================================================== -->
-  <!-- 2. MAIN CONTAINER                                        -->
+  <!-- 2. MAIN CONTAINER & DETONATION SUITE                     -->
   <!-- ======================================================== -->
-  <main class="app-main">
-    <div class="main-content" id="dashboardSection">
+  <main class="container-xl py-5" id="dashboardSection">
 
-      <!-- Hero Header -->
-      <section class="console-hero">
-        <div class="hero-badge">
-          <i class="fa-solid fa-shield-halved"></i>
-          <span>Hardened Ephemeral Sandbox &bull; Zero Host Blast Radius</span>
+    <!-- Hero Header -->
+    <header class="text-center mb-5 max-w-3xl mx-auto">
+      <div class="inline-flex items-center gap-2 badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 mb-3 text-xs font-semibold">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>Hardened Micro-VM &bull; Zero Host Blast Radius</span>
+      </div>
+      <h1 class="display-6 fw-bold tracking-tight text-white mb-2.5">
+        Live Phishing &amp; Malware Detonation
+      </h1>
+      <p class="lead text-gray-400 fs-6 leading-relaxed mb-0">
+        Safely execute suspect URLs inside isolated Playwright micro-containers. Network iptables prevent host lateral movement while Vultr Serverless Vision AI classifies credential harvesters in real time.
+      </p>
+    </header>
+
+    <!-- Elevated Detonation Card (Bootstrap Card + Tailwind Utilities) -->
+    <section class="card bg-[#131620] border border-white/10 rounded-4 shadow-xl p-4 p-md-5 mb-5">
+      <form id="scanForm" class="space-y-4">
+        <!-- Target URL Input -->
+        <div class="input-group input-group-lg bg-[#090b10] border border-white/15 rounded-3 p-1.5 shadow-inner transition focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20">
+          <span class="input-group-text bg-transparent border-0 text-gray-400 ps-3">
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </span>
+          <input
+            type="text"
+            id="targetUrl"
+            class="form-control bg-transparent border-0 text-white shadow-none text-sm md:text-base font-normal placeholder:text-gray-500"
+            placeholder="Paste target URL to detonate (e.g. https://secure-bank-login.phish.com)..."
+            required
+            autocomplete="off"
+          />
+          <button
+            type="submit"
+            id="submitBtn"
+            class="btn btn-primary px-4 rounded-3 fw-semibold flex items-center gap-2 shadow-sm text-sm"
+          >
+            <i class="fa-solid fa-bolt"></i>
+            <span>Detonate URL</span>
+          </button>
         </div>
-        <h1 class="hero-title">Live Phishing &amp; Malware Detonation</h1>
-        <p class="hero-subtitle">
-          Safely inspect suspect URLs inside isolated Playwright micro-containers. Network iptables prevent host lateral movement while Vultr Serverless Vision AI classifies credential harvesters in real time.
-        </p>
-      </section>
 
-      <!-- Detonation Input Card (Material Elevated) -->
-      <section class="detonation-card">
-        <form id="scanForm" class="scan-form">
-          <div class="input-container">
-            <div class="input-icon">
-              <i class="fa-solid fa-magnifying-glass"></i>
+        <!-- Quick Canaries / Presets Row -->
+        <div class="flex items-center gap-2 flex-wrap pt-1">
+          <span class="text-xs font-medium text-gray-400 me-1">Quick Presets:</span>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-success rounded-pill px-3 text-xs fw-medium flex items-center gap-1.5 preset-btn hero-preset"
+            data-url="https://example.com"
+            title="Harmless RFC 2606 baseline verification"
+          >
+            <i class="fa-solid fa-circle-check"></i>
+            <span>example.com (Safe)</span>
+          </button>
+
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-success rounded-pill px-3 text-xs fw-medium flex items-center gap-1.5 preset-btn hero-preset"
+            data-url="https://en.wikipedia.org"
+            title="Wikipedia clean DOM verification"
+          >
+            <i class="fa-solid fa-circle-check"></i>
+            <span>wikipedia.org (Safe)</span>
+          </button>
+
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-danger rounded-pill px-3 text-xs fw-medium flex items-center gap-1.5 preset-btn hero-preset"
+            data-url="demo://fake-bank"
+            title="Interactive fake bank credential harvester with Pattern B"
+          >
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span>Demo: Fake SBI Bank (Malicious)</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Real-Time Pipeline Node Flow -->
+      <div class="d-flex align-items-center justify-content-between mt-4 pt-4 border-top border-white/5 overflow-x-auto text-xs text-gray-400 gap-2">
+        <div class="flex items-center gap-2 shrink-0">
+          <div class="pipeline-dot" id="nodeClient"></div>
+          <span class="font-medium">1. Client Dispatch</span>
+        </div>
+        <div class="flex-grow-1 border-t border-white/10 mx-2 min-w-[24px]"></div>
+        <div class="flex items-center gap-2 shrink-0">
+          <div class="pipeline-dot" id="nodeHost"></div>
+          <span class="font-medium">2. Host Jail (iptables)</span>
+        </div>
+        <div class="flex-grow-1 border-t border-white/10 mx-2 min-w-[24px]"></div>
+        <div class="flex items-center gap-2 shrink-0">
+          <div class="pipeline-dot" id="nodeSandbox"></div>
+          <span class="font-medium">3. Docker Micro-VM</span>
+        </div>
+        <div class="flex-grow-1 border-t border-white/10 mx-2 min-w-[24px]"></div>
+        <div class="flex items-center gap-2 shrink-0">
+          <div class="pipeline-dot" id="nodeInference"></div>
+          <span class="font-medium">4. Vultr AI Inference</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- 3. LIVE DETONATION WORKSPACE (SPLIT VIEW)                -->
+    <!-- ======================================================== -->
+    <section id="detonationWorkspace" class="card bg-[#131620] border border-white/10 rounded-4 shadow-xl overflow-hidden mb-5 hidden">
+      <!-- Workspace Header -->
+      <div class="card-header bg-[#181c28] border-b border-white/10 py-3 px-4 flex items-center justify-between">
+        <div class="flex items-center gap-2 font-semibold text-white text-sm">
+          <i class="fa-solid fa-microchip text-blue-400"></i>
+          <span>Live Detonation Telemetry &amp; Headless Capture</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span id="sseIndicator" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1 font-mono text-xs">
+            STREAMING SSE
+          </span>
+          <span id="eventCount" class="font-mono text-xs text-gray-400">0 events</span>
+        </div>
+      </div>
+
+      <!-- Split Grid: Terminal + Playwright Capture -->
+      <div class="row g-0">
+        <!-- Left Column: Terminal Execution Logs -->
+        <div class="col-lg-6 border-end border-white/10 bg-[#090b10] flex flex-col">
+          <div class="h-10 px-4 bg-white/[0.02] border-b border-white/5 flex items-center justify-between">
+            <div class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-yellow-500 inline-block"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span>
             </div>
+            <div class="font-mono text-xs font-semibold text-gray-400">
+              <i class="fa-solid fa-terminal me-1"></i> phishnet :: host-jail
+            </div>
+            <span class="font-mono text-[10px] font-bold text-success">&#9679; 0 LEAKS ALLOWED</span>
+          </div>
+          <div id="terminalLog" class="p-3.5 overflow-y-auto font-mono text-xs leading-relaxed max-h-[460px] min-h-[380px] space-y-1">
+            <div class="text-gray-500 italic">// Standby for scan initiation...</div>
+          </div>
+        </div>
+
+        <!-- Right Column: Playwright Browser Screenshot Viewport -->
+        <div class="col-lg-6 bg-[#090b10] flex flex-col">
+          <div class="h-10 px-4 bg-white/[0.02] border-b border-white/5 flex items-center justify-between">
+            <div class="font-mono text-xs font-semibold text-gray-400">
+              <i class="fa-solid fa-camera me-1"></i> Playwright Capture Viewport
+            </div>
+            <span id="shotCount" class="font-mono text-[11px] text-gray-400">0 captures</span>
+          </div>
+          <div class="p-4 flex-grow flex items-center justify-center relative min-h-[380px] browser-viewport-box">
+            <div class="text-center text-gray-500 p-4 browser-placeholder-box" id="browserPlaceholder">
+              <i class="fa-solid fa-display text-3xl mb-2 text-gray-600"></i>
+              <p class="text-xs mb-0">Live sandbox browser screenshot will render here upon launch</p>
+            </div>
+            <img id="primaryShot" src="" alt="Live Sandbox Screenshot" class="max-w-full max-h-[440px] rounded-2 border border-white/10 shadow-lg object-contain cursor-pointer hover:scale-[1.01] transition" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Threat Verdict Report Card -->
+    <section id="verdictCard" class="card bg-[#131620] border border-white/10 rounded-4 shadow-xl p-4 p-md-5 mb-5 hidden">
+      <div class="flex items-start justify-between border-b border-white/10 pb-4 mb-4 flex-wrap gap-3">
+        <div>
+          <span id="verdictBadge" class="badge bg-secondary font-mono text-xs mb-2">INSPECTION PENDING</span>
+          <h2 id="verdictHeading" class="text-2xl font-bold text-white mb-0">Forensic Analysis Complete</h2>
+        </div>
+        <div class="text-xs text-gray-400 space-y-1 text-end">
+          <div>Engine: <span id="threatSourceText" class="text-gray-200 font-medium">Vultr Serverless (Llama-3 Vision)</span></div>
+          <div>Confidence: <span id="confidenceText" class="text-blue-400 font-mono font-bold">98%</span></div>
+        </div>
+      </div>
+
+      <!-- Brand Impersonation Alert Banner -->
+      <div id="brandBanner" class="alert alert-danger flex items-center gap-3 rounded-3 mb-4 hidden">
+        <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+        <div class="text-sm">
+          <strong>Brand Impersonation Detected:</strong>
+          <span>Target falsely claims to represent <span id="brandName" class="font-bold underline"></span></span>
+        </div>
+      </div>
+
+      <!-- Harvested Form Inputs Box -->
+      <div id="targetedDataBox" class="border border-danger/30 bg-danger/10 rounded-3 p-3.5 mb-4 hidden">
+        <span class="text-xs font-semibold text-danger d-block mb-2">Sensitive Form Fields Harvested:</span>
+        <div id="targetedDataList" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <!-- Forensic Indicators Checklist -->
+      <div class="mb-4">
+        <h4 class="text-sm font-semibold text-white mb-2.5">Forensic Indicators &amp; Explanations:</h4>
+        <ul id="reasonsList" class="list-disc list-inside text-xs text-gray-300 space-y-1.5 leading-relaxed"></ul>
+      </div>
+
+      <!-- Threat Neutralization & Emergency Escalation -->
+      <div id="escalationDrawer" class="alert alert-danger rounded-3 mb-0 hidden">
+        <div class="flex items-center gap-2 font-bold text-sm text-red-300 mb-1">
+          <i class="fa-solid fa-shield-virus"></i>
+          <span id="escalationTitle">Emergency Incident Response Triggered</span>
+        </div>
+        <p id="escalationDesc" class="text-xs text-gray-300 mb-0"></p>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- 4. RECENT DETONATIONS TABLE (BOOTSTRAP 6 TABLE)           -->
+    <!-- ======================================================== -->
+    <section class="mt-4" id="recentActivitySection">
+      <div class="flex items-center justify-between mb-3.5 flex-wrap gap-3">
+        <div>
+          <h3 class="text-lg font-bold text-white mb-0.5">Recent Detonation Records</h3>
+          <span class="text-xs text-gray-400">Persisted audit trail from SQLite forensic store</span>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <div class="input-group input-group-sm bg-[#131620] border border-white/10 rounded-3 overflow-hidden">
+            <span class="input-group-text bg-transparent border-0 text-gray-500">
+              <i class="fa-solid fa-magnifying-glass text-xs"></i>
+            </span>
             <input
               type="text"
-              id="targetUrl"
-              class="target-input"
-              placeholder="Paste target URL to detonate (e.g., https://fake-portal-login.com)..."
-              required
+              id="searchScansInput"
+              class="form-control bg-transparent border-0 text-white shadow-none text-xs placeholder:text-gray-500"
+              placeholder="Filter by domain or verdict..."
               autocomplete="off"
             />
-            <button type="submit" id="submitBtn" class="btn-detonate">
-              <i class="fa-solid fa-bolt"></i>
-              <span>Detonate URL</span>
-            </button>
           </div>
-
-          <!-- Quick Canaries & Preset Chips -->
-          <div class="canary-row">
-            <span class="canary-label">Quick Presets:</span>
-            <div class="canary-chips">
-              <button
-                type="button"
-                class="chip-canary safe preset-btn hero-preset"
-                data-url="https://example.com"
-                title="Harmless RFC 2606 baseline verification"
-              >
-                <i class="fa-solid fa-circle-check"></i>
-                <span>example.com (Safe)</span>
-              </button>
-
-              <button
-                type="button"
-                class="chip-canary safe preset-btn hero-preset"
-                data-url="https://en.wikipedia.org"
-                title="Wikipedia clean DOM verification"
-              >
-                <i class="fa-solid fa-circle-check"></i>
-                <span>wikipedia.org (Safe)</span>
-              </button>
-
-              <button
-                type="button"
-                class="chip-canary danger preset-btn hero-preset"
-                data-url="demo://fake-bank"
-                title="Interactive fake bank credential harvester with Pattern B"
-              >
-                <i class="fa-solid fa-triangle-exclamation"></i>
-                <span>Demo: Fake SBI Bank (Malicious)</span>
-              </button>
-            </div>
-          </div>
-        </form>
-
-        <!-- Pipeline Execution Flow Strip -->
-        <div class="pipeline-strip">
-          <div class="pipeline-item">
-            <div class="pipeline-dot" id="nodeClient"></div>
-            <span class="pipeline-name">1. Client Dispatch</span>
-          </div>
-          <div class="pipeline-divider"></div>
-          <div class="pipeline-item">
-            <div class="pipeline-dot" id="nodeHost"></div>
-            <span class="pipeline-name">2. Host Jail (iptables)</span>
-          </div>
-          <div class="pipeline-divider"></div>
-          <div class="pipeline-item">
-            <div class="pipeline-dot" id="nodeSandbox"></div>
-            <span class="pipeline-name">3. Docker Micro-VM</span>
-          </div>
-          <div class="pipeline-divider"></div>
-          <div class="pipeline-item">
-            <div class="pipeline-dot" id="nodeInference"></div>
-            <span class="pipeline-name">4. Vultr AI Inference</span>
-          </div>
+          <button type="button" id="refreshScansBtn" class="btn btn-outline-secondary btn-sm rounded-3 text-xs flex items-center gap-1.5">
+            <i class="fa-solid fa-rotate-right"></i>
+            <span>Refresh</span>
+          </button>
         </div>
-      </section>
+      </div>
 
-      <!-- Live Execution Workspace (Split Terminal + Playwright Capture) -->
-      <section id="detonationWorkspace" class="workspace-section hidden">
-        <div class="workspace-card">
-          <div class="workspace-header">
-            <div class="workspace-header-title">
-              <i class="fa-solid fa-microchip header-icon"></i>
-              <span>Live Detonation Telemetry &amp; Headless Capture</span>
-            </div>
-            <div class="workspace-header-meta">
-              <span id="sseIndicator" class="sse-status-badge">
-                STREAMING SSE
-              </span>
-              <span id="eventCount" class="event-counter">0 events</span>
-            </div>
-          </div>
-
-          <div class="workspace-grid">
-            <!-- Left: Terminal Log Viewport -->
-            <div class="terminal-panel">
-              <div class="panel-header">
-                <div class="terminal-dots">
-                  <span class="dot dot-red"></span>
-                  <span class="dot dot-yellow"></span>
-                  <span class="dot dot-green"></span>
-                </div>
-                <div class="panel-title">
-                  <i class="fa-solid fa-terminal mr-1"></i>
-                  <span>phishnet :: host-jail</span>
-                </div>
-                <span class="panel-badge-safe">&#9679; 0 LEAKS ALLOWED</span>
-              </div>
-              <div id="terminalLog" class="terminal-log-body">
-                <div class="terminal-idle-msg">// Standby for scan initiation...</div>
-              </div>
-            </div>
-
-            <!-- Right: Playwright Screenshot Viewport -->
-            <div class="browser-panel">
-              <div class="panel-header">
-                <div class="panel-title">
-                  <i class="fa-solid fa-camera mr-1"></i>
-                  <span>Playwright Capture Viewport</span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <span id="shotCount" class="panel-counter">0 captures</span>
-                </div>
-              </div>
-              <div class="browser-body" id="browserViewBody">
-                <div class="browser-empty-state" id="browserPlaceholder">
-                  <i class="fa-solid fa-display text-2xl mb-2"></i>
-                  <span>Live sandbox browser view will appear here upon launch</span>
-                </div>
-                <img id="primaryShot" src="" alt="Live Sandbox Screenshot" />
-              </div>
-            </div>
-          </div>
+      <!-- Bootstrap 6 Dark Data Table -->
+      <div class="card bg-[#131620] border border-white/10 rounded-4 overflow-hidden shadow-sm">
+        <div class="table-responsive">
+          <table class="table table-dark table-hover align-middle mb-0 text-xs">
+            <thead class="bg-[#181c28] border-b border-white/10 text-uppercase text-[11px] text-gray-400 font-semibold tracking-wider">
+              <tr>
+                <th class="py-3 px-3.5">Time</th>
+                <th class="py-3 px-3.5">Target URL</th>
+                <th class="py-3 px-3.5">Threat Type</th>
+                <th class="py-3 px-3.5">Network Isolation</th>
+                <th class="py-3 px-3.5">Confidence</th>
+                <th class="py-3 px-3.5">Impersonation</th>
+                <th class="py-3 px-3.5">Verdict Status</th>
+              </tr>
+            </thead>
+            <tbody id="activityTableBody" class="divide-y divide-white/5">
+              <!-- Dynamically rendered by app.js -->
+            </tbody>
+          </table>
         </div>
+      </div>
+    </section>
 
-        <!-- Threat Verdict Report Card -->
-        <div id="verdictCard" class="verdict-card hidden">
-          <div class="verdict-card-header">
-            <div>
-              <span id="verdictBadge" class="verdict-chip">INSPECTION PENDING</span>
-              <h2 id="verdictHeading" class="verdict-title">Forensic Analysis Complete</h2>
-            </div>
-            <div class="verdict-meta">
-              <div class="meta-row">
-                <span class="meta-label">Inference Engine:</span>
-                <span id="threatSourceText" class="meta-value">Vultr Serverless (Llama-3 Vision)</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-label">Assessment Confidence:</span>
-                <span id="confidenceText" class="meta-value confidence-highlight">98%</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Brand Impersonation Warning Banner -->
-          <div id="brandBanner" class="alert-banner-danger hidden">
-            <i class="fa-solid fa-triangle-exclamation"></i>
-            <div>
-              <strong>Brand Impersonation Detected:</strong>
-              <span>Target claims to be <span id="brandName" class="font-bold underline"></span></span>
-            </div>
-          </div>
-
-          <!-- Targeted Data Fields Harvested -->
-          <div id="targetedDataBox" class="harvest-box hidden">
-            <span class="harvest-title">Sensitive Input Fields Harvested:</span>
-            <div id="targetedDataList" class="harvest-chips"></div>
-          </div>
-
-          <!-- Analysis Reasons List -->
-          <div class="reasons-box">
-            <h4 class="reasons-title">Forensic Indicators &amp; Explanations:</h4>
-            <ul id="reasonsList" class="reasons-list"></ul>
-          </div>
-
-          <!-- Threat Escalation Drawer -->
-          <div id="escalationDrawer" class="escalation-box hidden">
-            <div class="flex items-center gap-2 font-bold text-red-300">
-              <i class="fa-solid fa-shield-virus"></i>
-              <span id="escalationTitle">Emergency Incident Response Triggered</span>
-            </div>
-            <p id="escalationDesc" class="escalation-text"></p>
-          </div>
-        </div>
-      </section>
-
-      <!-- Recent Detonations Table Section -->
-      <section class="recent-scans-section" id="recentActivitySection">
-        <div class="section-header">
-          <div class="section-title-group">
-            <h3 class="section-title">Recent Detonation Records</h3>
-            <span class="section-subtitle">Persisted audit trail from SQLite forensic store</span>
-          </div>
-          <div class="section-actions">
-            <div class="search-box">
-              <i class="fa-solid fa-magnifying-glass search-icon"></i>
-              <input
-                type="text"
-                id="searchScansInput"
-                class="search-input"
-                placeholder="Filter by domain or verdict..."
-                autocomplete="off"
-              />
-            </div>
-            <button type="button" id="refreshScansBtn" class="btn-refresh" title="Refresh Table">
-              <i class="fa-solid fa-rotate-right"></i>
-              <span>Refresh</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="table-card">
-          <div class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Target URL</th>
-                  <th>Threat Type</th>
-                  <th>Network Isolation</th>
-                  <th>Confidence</th>
-                  <th>Impersonation</th>
-                  <th>Verdict Status</th>
-                </tr>
-              </thead>
-              <tbody id="activityTableBody">
-                <!-- Dynamically populated by app.js -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-    </div>
-
-    <!-- Overview / Landing compatibility section -->
+    <!-- Hidden compatibility nodes for view-switching -->
     <div id="landingSection" class="hidden">
       <input type="hidden" id="heroTargetUrl" />
       <button id="heroDetonateBtn" class="hidden"></button>
       <button id="ctaLaunchBtn" class="hidden"></button>
       <button id="ctaSignInBtn" class="hidden"></button>
+      <button id="mobileMenuBtn" class="hidden"></button>
       <div id="architecture" class="hidden"></div>
     </div>
   </main>
 
   <!-- ======================================================== -->
-  <!-- 3. PATTERN B HUMAN-IN-THE-LOOP APPROVAL MODAL            -->
+  <!-- 5. PATTERN B HUMAN APPROVAL MODAL                        -->
   <!-- ======================================================== -->
-  <div id="approvalModal" class="modal-backdrop hidden">
-    <div class="modal-dialog">
-      <div class="modal-icon-badge warning">
+  <div id="approvalModal" class="modal-backdrop-custom hidden">
+    <div class="card bg-[#1a1e2b] border border-amber-500/40 rounded-4 shadow-2xl max-w-lg w-full p-4 text-center">
+      <div class="w-12 h-12 rounded-circle bg-amber-500/15 border border-amber-500/30 text-warning mx-auto flex items-center justify-center text-xl mb-3">
         <i class="fa-solid fa-triangle-exclamation"></i>
       </div>
-      <h3 class="modal-title">Interactive Credential Form Detected</h3>
-      <p class="modal-desc">
+      <h3 class="text-base font-bold text-white mb-2">Interactive Credential Form Detected</h3>
+      <p class="text-xs text-gray-300 leading-relaxed mb-4">
         The sandboxed target rendered an interactive authentication form. Under <strong>Pattern B (Zero Host Blast Radius)</strong>, authorize the sandbox agent to enter synthetic dummy credentials to analyze post-auth redirects?
       </p>
-      <div class="modal-actions">
-        <button type="button" id="denyBtn" class="btn-modal-secondary">
+      <div class="flex items-center gap-3">
+        <button type="button" id="denyBtn" class="btn btn-outline-secondary w-50 rounded-3 text-xs py-2 font-medium">
           Decline (Safe Stop)
         </button>
-        <button type="button" id="approveBtn" class="btn-modal-primary">
+        <button type="button" id="approveBtn" class="btn btn-primary w-50 rounded-3 text-xs py-2 font-semibold">
           Authorize Decoy Pass ⚡
         </button>
       </div>
@@ -411,24 +527,24 @@
   </div>
 
   <!-- ======================================================== -->
-  <!-- 4. AUTH MODAL (Google & 1-Click Demo)                     -->
+  <!-- 6. AUTH MODAL (Google GIS & 1-Click Demo)                 -->
   <!-- ======================================================== -->
-  <div id="authModal" class="modal-backdrop hidden">
-    <div class="modal-dialog auth-dialog">
-      <div class="modal-header">
-        <h3 id="authModalTitle" class="modal-title">Sign In to Phish&amp;Chips</h3>
-        <button type="button" id="closeAuthModalBtn" class="btn-close">&times;</button>
+  <div id="authModal" class="modal-backdrop-custom hidden">
+    <div class="card bg-[#1a1e2b] border border-white/10 rounded-4 shadow-2xl max-w-sm w-full p-4">
+      <div class="flex items-center justify-between border-b border-white/10 pb-3 mb-3">
+        <h3 id="authModalTitle" class="text-sm font-bold text-white mb-0">Sign In to Phish&amp;Chips</h3>
+        <button type="button" id="closeAuthModalBtn" class="btn-close btn-close-white" aria-label="Close"></button>
       </div>
-      <p class="modal-desc" style="text-align: left; margin-bottom: 20px;">
-        Authenticate to save detonation histories and unlock enterprise SIEM forwarding.
+      <p class="text-xs text-gray-400 mb-3.5">
+        Authenticate to persist detonation histories and unlock enterprise SIEM event streaming.
       </p>
-      <div class="auth-buttons">
-        <button type="button" id="googleSignInBtn" class="btn-google">
-          <i class="fa-brands fa-google"></i>
+      <div class="space-y-2.5">
+        <button type="button" id="googleSignInBtn" class="btn btn-light w-100 rounded-3 text-xs py-2.5 fw-semibold flex items-center justify-center gap-2">
+          <i class="fa-brands fa-google text-danger"></i>
           <span>Continue with Google</span>
         </button>
         <div id="g_id_signin" class="hidden"></div>
-        <button type="button" id="demoLoginBtn" class="btn-demo">
+        <button type="button" id="demoLoginBtn" class="btn btn-outline-primary w-100 rounded-3 text-xs py-2.5 fw-semibold flex items-center justify-center gap-2">
           <i class="fa-solid fa-user-shield"></i>
           <span>Instant 1-Click Demo Login</span>
         </button>
@@ -437,18 +553,18 @@
   </div>
 
   <!-- ======================================================== -->
-  <!-- 5. SCREENSHOT ZOOM MODAL                                 -->
+  <!-- 7. SCREENSHOT ZOOM MODAL                                 -->
   <!-- ======================================================== -->
-  <div id="zoomModal" class="modal-backdrop hidden">
-    <div class="zoom-dialog">
-      <button type="button" id="closeModalBtn" class="btn-zoom-close">
-        <i class="fa-solid fa-xmark"></i> Close Fullscreen
+  <div id="zoomModal" class="modal-backdrop-custom hidden">
+    <div class="relative max-w-5xl max-h-[92vh] flex flex-col items-end">
+      <button type="button" id="closeModalBtn" class="btn btn-dark btn-sm rounded-pill mb-2 border border-white/20 text-xs">
+        <i class="fa-solid fa-xmark me-1"></i> Close Fullscreen
       </button>
-      <img id="modalImg" src="" alt="Full Capture" class="zoom-image" />
+      <img id="modalImg" src="" alt="Full Capture" class="max-w-full max-h-[85vh] object-contain rounded-3 border border-white/20 shadow-2xl" />
     </div>
   </div>
 
-  <!-- Application Logic -->
+  <!-- Core Controller Application Logic -->
   <script src="/static/app.js"></script>
 </body>
 </html>
