@@ -685,6 +685,13 @@ html, body {
 /* ======================================================== */
 /* AURORA SIGN UP MODAL & TWO-COLUMN INTERFACE              */
 /* ======================================================== */
+.aurora-modal-backdrop[hidden] {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 .aurora-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -692,11 +699,21 @@ html, body {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   z-index: 200;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   padding: 12px;
-  animation: overlayIn 0.3s ease both;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.25s ease;
+}
+
+.aurora-modal-backdrop.active {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
 
 .aurora-modal-container {
@@ -712,29 +729,43 @@ html, body {
   box-shadow: 0 25px 80px rgba(0, 0, 0, 0.95);
   display: flex;
   flex-direction: column;
+  transform: scale(0.96) translateY(8px);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.aurora-modal-backdrop.active .aurora-modal-container {
+  transform: scale(1) translateY(0);
 }
 
 .aurora-close-btn {
   position: absolute;
   top: 16px;
   right: 18px;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.12);
   color: #ffffff;
-  border: none;
-  font-size: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: 20px;
   line-height: 1;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  z-index: 50;
-  transition: background-color 0.2s ease;
+  z-index: 999;
+  pointer-events: auto;
+  transition: all 0.2s ease;
+  user-select: none;
 }
 
 .aurora-close-btn:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.25);
+  transform: scale(1.08);
+}
+
+.aurora-close-btn:active {
+  transform: scale(0.94);
 }
 
 .aurora-two-col {

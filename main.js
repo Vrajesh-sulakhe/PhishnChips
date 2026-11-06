@@ -187,6 +187,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!auroraModal) return;
     closeMobileMenu();
     auroraModal.hidden = false;
+    auroraModal.removeAttribute('hidden');
+    auroraModal.style.display = 'flex';
     void auroraModal.offsetWidth;
     auroraModal.classList.add('active');
     document.body.classList.add('modal-open');
@@ -198,35 +200,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  const closeAuroraModal = () => {
+  const closeAuroraModal = (e) => {
+    if (e && e.stopPropagation) {
+      e.stopPropagation();
+    }
     if (!auroraModal) return;
     auroraModal.classList.remove('active');
     document.body.classList.remove('modal-open');
-    setTimeout(() => {
-      if (!auroraModal.classList.contains('active')) {
-        auroraModal.hidden = true;
-      }
-    }, 300);
+    auroraModal.style.display = 'none';
+    auroraModal.hidden = true;
+    auroraModal.setAttribute('hidden', '');
   };
+
+  window.openAuroraModal = openAuroraModal;
+  window.closeAuroraModal = closeAuroraModal;
 
   if (signInBtn) signInBtn.addEventListener('click', openAuroraModal);
   if (mobileSignInBtn) mobileSignInBtn.addEventListener('click', openAuroraModal);
   if (getStartedBtn) getStartedBtn.addEventListener('click', openAuroraModal);
-  if (auroraCloseBtn) auroraCloseBtn.addEventListener('click', closeAuroraModal);
+  if (auroraCloseBtn) {
+    auroraCloseBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeAuroraModal(e);
+    });
+  }
 
-  // Close modal when clicking outside the dialog card
+  // Close modal when clicking outside the dialog card (on backdrop)
   if (auroraModal) {
     auroraModal.addEventListener('click', (e) => {
       if (e.target === auroraModal) {
-        closeAuroraModal();
+        closeAuroraModal(e);
       }
     });
   }
 
   // Close modal with Escape key
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && auroraModal && !auroraModal.hidden) {
-      closeAuroraModal();
+    if (e.key === 'Escape' && auroraModal && !auroraModal.hidden && auroraModal.style.display !== 'none') {
+      closeAuroraModal(e);
     }
   });
 
