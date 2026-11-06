@@ -77,23 +77,23 @@ class DemoAuthRequest(BaseModel):
     name: Optional[str] = "SecOps Lead Analyst"
     email: Optional[str] = "analyst@phishchips.internal"
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def serve_root():
     index_file = FRONTEND_DIR / "index.html"
     if not index_file.exists():
         return {"status": "ok", "service": "Phish&Chips Backend (index.html not built yet)"}
     return FileResponse(index_file)
 
-@app.get("/styles.css")
+@app.api_route("/styles.css", methods=["GET", "HEAD"])
 def serve_styles_root():
     return FileResponse(FRONTEND_DIR / "styles.css")
 
-@app.get("/app.js")
+@app.api_route("/app.js", methods=["GET", "HEAD"])
 def serve_app_js_root():
     return FileResponse(FRONTEND_DIR / "app.js")
 
-@app.get("/health")
-@app.get("/api/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 def health_check():
     api_key_set = bool(os.getenv("VULTR_INFERENCE_API_KEY", "").strip() or os.getenv("VULTR_API_KEY", "").strip())
     active_sandboxes = scanner.get_active_scans_count()
