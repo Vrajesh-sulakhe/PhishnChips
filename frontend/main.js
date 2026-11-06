@@ -118,6 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
     burgerBtn.setAttribute('aria-expanded', 'true');
     menuOverlay.hidden = false;
     menuSheet.hidden = false;
+    menuOverlay.removeAttribute('hidden');
+    menuSheet.removeAttribute('hidden');
     // Force reflow for CSS transitions
     void menuOverlay.offsetWidth;
     void menuSheet.offsetWidth;
@@ -138,8 +140,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!burgerBtn.classList.contains('is-open')) {
         menuOverlay.hidden = true;
         menuSheet.hidden = true;
+        menuOverlay.setAttribute('hidden', '');
+        menuSheet.setAttribute('hidden', '');
       }
-    }, 300);
+    }, 250);
   };
 
   if (burgerBtn) {
@@ -163,11 +167,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  window.addEventListener('resize', () => {
-    if (window.innerWidth > 720 && burgerBtn && burgerBtn.classList.contains('is-open')) {
+  const checkViewport = () => {
+    if (window.innerWidth > 720) {
       closeMobileMenu();
+      if (menuOverlay) {
+        menuOverlay.hidden = true;
+        menuOverlay.setAttribute('hidden', '');
+        menuOverlay.classList.remove('active');
+      }
+      if (menuSheet) {
+        menuSheet.hidden = true;
+        menuSheet.setAttribute('hidden', '');
+        menuSheet.classList.remove('active');
+      }
     }
-  });
+  };
+
+  window.addEventListener('resize', checkViewport);
+  checkViewport();
 
   // ----------------------------------------------------
   // 4. AURORA SIGN UP MODAL CONTROLLER
