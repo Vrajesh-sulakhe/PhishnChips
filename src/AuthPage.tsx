@@ -18,14 +18,56 @@ export default function AuthPage({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  function submit(event: React.FormEvent) {
+  async function submit(event: React.FormEvent) {
     event.preventDefault();
-    onComplete({
-      name: name.trim() || email.split("@")[0].replace(/[._-]/g, " ") || "Analyst",
-      email: email.trim(),
-    });
+    setSubmitting(true);
+    const resolvedName = name.trim() || email.split("@")[0].replace(/[._-]/g, " ") || "Analyst";
+    const resolvedEmail = email.trim();
+    try {
+      const res = await fetch("/api/auth/demo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: resolvedName, email: resolvedEmail }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.user) {
+          onComplete({ name: data.user.name, email: data.user.email });
+          setPassword("");
+          setSubmitting(false);
+          return;
+        }
+      }
+    } catch {}
+    setSubmitting(false);
+    onComplete({ name: resolvedName, email: resolvedEmail });
     setPassword("");
+  }
+
+  async function handleDemoLogin() {
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/auth/demo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "SecOps Lead Analyst",
+          email: "analyst@phishchips.internal",
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.user) {
+          onComplete({ name: data.user.name, email: data.user.email });
+          setSubmitting(false);
+          return;
+        }
+      }
+    } catch {}
+    setSubmitting(false);
+    onComplete({ name: "SecOps Lead Analyst", email: "analyst@phishchips.internal" });
   }
 
   return (
@@ -119,8 +161,8 @@ export default function AuthPage({
                   </button>
                 </div>
               </label>
-              <button className="red-button auth-submit" type="submit">
-                {signup ? "Create workspace" : "Sign in"}
+              <button className="red-button auth-submit" type="submit" disabled={submitting}>
+                {submitting ? "Authenticating..." : signup ? "Create workspace" : "Sign in"}
                 <Icon name="arrow" size={18} />
               </button>
 
@@ -132,6 +174,7 @@ export default function AuthPage({
               <button
                 type="button"
                 className="outline-button auth-demo-btn"
+                disabled={submitting}
                 style={{
                   width: "100%",
                   justifyContent: "center",
@@ -144,12 +187,7 @@ export default function AuthPage({
                   fontFamily: "var(--mono)",
                   fontSize: "12px",
                 }}
-                onClick={() => {
-                  onComplete({
-                    name: "SecOps Lead Analyst",
-                    email: "analyst@phishchips.internal",
-                  });
-                }}
+                onClick={handleDemoLogin}
               >
                 <Icon name="shield" size={15} />
                 Instant Demo Access (Lead Analyst)

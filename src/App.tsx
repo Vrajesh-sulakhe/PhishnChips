@@ -35,7 +35,7 @@ function readViewerSession(): Viewer | null {
   } catch {
     // A missing or unavailable browser session must not break navigation.
   }
-  // Provide analyst session when direct dashboard/console/product path was opened
+  // Auto-authenticate with demo analyst if direct console/dashboard path was hit
   const path = window.location.pathname.replace(/^\/+/, "").split("/")[0];
   const hash = window.location.hash.slice(1).split("?")[0];
   if (path === "dashboard" || path === "console" || path === "product" || hash === "dashboard") {
@@ -56,6 +56,23 @@ function writeViewerSession(viewer: Viewer | null) {
 export default function App() {
   const [page, setPage] = useState<Page>(pageFromLocation);
   const [viewer, setViewer] = useState<Viewer | null>(readViewerSession);
+
+  // Sync session with backend /api/auth/me on mount
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.authenticated && data.user) {
+          const u: Viewer = {
+            name: data.user.name || "Lead Analyst",
+            email: data.user.email || "analyst@phishchips.internal",
+          };
+          writeViewerSession(u);
+          setViewer(u);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const change = () => {
@@ -89,6 +106,7 @@ export default function App() {
         viewer={currentViewer}
         onHome={() => navigate("home")}
         onSignOut={() => {
+          fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
           writeViewerSession(null);
           setViewer(null);
           navigate("home");

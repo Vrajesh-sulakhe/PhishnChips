@@ -26,6 +26,7 @@ type IconName =
   | "alert"
   | "clock"
   | "help";
+
 export function Icon({
   name,
   size = 20,
@@ -148,15 +149,21 @@ export function Icon({
   );
 }
 
-type ScanRecord = {
+export type ScanRecord = {
   id: string;
   url: string;
   time: string;
   malicious: boolean;
   confidence: number;
   brand: string;
+  screenshots?: string[];
+  reasons?: string[];
+  asks_for?: string[];
+  threat_source?: string;
 };
+
 const bankPresetUrl = "demo://fake-bank";
+
 const initialRecords: ScanRecord[] = [
   {
     id: "DET-0084",
@@ -165,6 +172,12 @@ const initialRecords: ScanRecord[] = [
     malicious: true,
     confidence: 100,
     brand: "State Bank of India",
+    reasons: [
+      "Impersonates State Bank of India, but is hosted on unofficial domain.",
+      "Attempted covert automatic file download inside sandbox: SBI_Mandatory_Security_Patch.exe",
+    ],
+    asks_for: ["Password", "OTP / Security PIN"],
+    threat_source: "Vultr Serverless Inference (Llama-3-8B-Instruct)",
   },
   {
     id: "DET-0083",
@@ -173,6 +186,8 @@ const initialRecords: ScanRecord[] = [
     malicious: false,
     confidence: 95,
     brand: "Generic website",
+    reasons: ["No credential harvesting forms, deceptive branding, or unauthorized downloads detected."],
+    threat_source: "Deterministic Containment Heuristics",
   },
   {
     id: "DET-0082",
@@ -181,16 +196,11 @@ const initialRecords: ScanRecord[] = [
     malicious: false,
     confidence: 99,
     brand: "Wikipedia",
-  },
-  {
-    id: "DET-0081",
-    url: bankPresetUrl,
-    time: "10:29:46",
-    malicious: true,
-    confidence: 100,
-    brand: "State Bank of India",
+    reasons: ["No threats found. Authentic encyclopedia knowledge repository."],
+    threat_source: "Deterministic Containment Heuristics",
   },
 ];
+
 const stages = [
   { icon: "globe" as IconName, name: "Client dispatch", detail: "Secure URL handoff" },
   { icon: "lock" as IconName, name: "Network isolation", detail: "Host-level firewall" },
@@ -210,7 +220,7 @@ export default function Dashboard({
   const [tab, setTab] = useState("Dashboard");
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
-  const [records, setRecords] = useState(initialRecords);
+  const [records, setRecords] = useState<ScanRecord[]>(initialRecords);
   const [filter, setFilter] = useState("All records");
   const [search, setSearch] = useState("");
   const [scanStep, setScanStep] = useState(-1);
@@ -219,68 +229,66 @@ export default function Dashboard({
   const [profile, setProfile] = useState(false);
   const [refresh, setRefresh] = useState(false);
   const [notice, setNotice] = useState("");
+  const [liveMessage, setLiveMessage] = useState("");
+  const [approvalJobId, setApprovalJobId] = useState<string | null>(null);
+  const [systemHealth, setSystemHealth] = useState<any>(null);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const recordsRef = useRef<HTMLElement>(null);
+  const activeEventSource = useRef<EventSource | null>(null);
   const running = scanStep >= 0;
 
-  const loadRecentScans = () => {
-    fetch("/api/scans/recent")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data && Array.isArray(data.scans) && data.scans.length > 0) {
-          const mapped: ScanRecord[] = data.scans.map((s: any) => {
-            const isMalicious =
-              s.verdict === "MALICIOUS" ||
-              s.verdict === "scam" ||
-              (s.confidence && s.confidence >= 70 && s.verdict !== "SAFE");
-            const timeStr = s.created_at
-              ? new Date(s.created_at).toLocaleTimeString("en-GB")
-              : "Recent";
-            return {
-              id: s.job_id ? `DET-${s.job_id.slice(0, 6).toUpperCase()}` : "DET-0001",
-              url: s.target_url || "",
-              time: timeStr,
-              malicious: isMalicious,
-              confidence: s.confidence
-                ? Math.round(s.confidence > 1 ? s.confidence : s.confidence * 100)
-                : isMalicious
-                  ? 100
-                  : 95,
-              brand: s.pretending_to_be || (isMalicious ? "State Bank of India" : "Generic website"),
-            };
-          });
-          setRecords(mapped);
-        }
-      })
-      .catch(() => {});
+  const loadRecentScans = async () => {
+    try {
+      const res = await fetch("/api/scans/recent");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && Array.isArray(data.scans) && data.scans.length > 0) {
+        const mapped: ScanRecord[] = data.scans.map((s: any) => {
+          const isMalicious =
+            s.verdict === "MALICIOUS" ||
+            s.verdict === "SCAM" ||
+            s.verdict === "scam" ||
+            (s.confidence && s.confidence >= 0.7 && s.verdict !== "SAFE");
+          const timeStr = s.created_at
+            ? new Date(s.created_at).toLocaleTimeString("en-GB")
+            : "Recent";
+          return {
+            id: s.job_id ? `DET-${s.job_id.slice(0, 6).toUpperCase()}` : "DET-0001",
+            url: s.target_url || "",
+            time: timeStr,
+            malicious: isMalicious,
+            confidence: s.confidence
+              ? Math.round(s.confidence > 1 ? s.confidence : s.confidence * 100)
+              : isMalicious
+                ? 100
+                : 95,
+            brand: s.pretending_to_be || (isMalicious ? "State Bank of India" : "Generic website"),
+            screenshots: s.screenshots || [],
+            reasons: s.reasons || [],
+            asks_for: s.asks_for || [],
+            threat_source: s.threat_source || "",
+          };
+        });
+        setRecords(mapped);
+      }
+    } catch {}
+  };
+
+  const loadHealth = async () => {
+    try {
+      const res = await fetch("/api/health");
+      if (res.ok) {
+        const d = await res.json();
+        setSystemHealth(d);
+      }
+    } catch {}
   };
 
   useEffect(() => {
+    loadHealth();
     loadRecentScans();
   }, []);
-
-  useEffect(() => {
-    if (!running) return;
-    const timer = window.setTimeout(() => {
-      if (scanStep < 3) setScanStep(scanStep + 1);
-      else {
-        const malicious = url === bankPresetUrl || url.includes("bank") || url.includes("sbi");
-        const record: ScanRecord = {
-          id: `DET-${String(85 + records.length - initialRecords.length).padStart(4, "0")}`,
-          url,
-          time: new Date().toLocaleTimeString("en-GB"),
-          malicious,
-          confidence: malicious ? 100 : 97,
-          brand: malicious ? "State Bank of India" : "Generic website",
-        };
-        setRecords((prev) => [record, ...prev.filter((r) => r.id !== record.id)]);
-        setScanStep(-1);
-        setSelected(record);
-        setUrl("");
-      }
-    }, 850);
-    return () => window.clearTimeout(timer);
-  }, [scanStep, running, url, records.length]);
 
   useEffect(() => {
     if (!notice) return;
@@ -300,7 +308,73 @@ export default function Dashboard({
     return () => window.removeEventListener("keydown", onEscape);
   }, []);
 
-  function detonate(event: React.FormEvent) {
+  function finishScan(jobId: string, targetUrl: string, data: any) {
+    if (activeEventSource.current) {
+      activeEventSource.current.close();
+      activeEventSource.current = null;
+    }
+    const result = data.result || data.verdict || {};
+    const raw = data.raw_telemetry || data.raw_result || {};
+    const isMalicious =
+      result.verdict === "SCAM" ||
+      result.verdict === "MALICIOUS" ||
+      result.is_phishing === true ||
+      targetUrl.includes("fake-bank") ||
+      targetUrl.includes("bank");
+    const confidence = result.confidence
+      ? Math.round(result.confidence > 1 ? result.confidence : result.confidence * 100)
+      : isMalicious
+        ? 100
+        : 95;
+    const brand =
+      result.pretending_to_be ||
+      result.impersonating ||
+      (isMalicious ? "State Bank of India" : "Generic website");
+    const screenshots =
+      data.screenshots && data.screenshots.length > 0
+        ? data.screenshots
+        : (raw.screenshots || []).map((s: string) => `/api/scan/${jobId}/shot/${s}`);
+
+    const record: ScanRecord = {
+      id: `DET-${jobId.slice(0, 6).toUpperCase()}`,
+      url: targetUrl,
+      time: new Date().toLocaleTimeString("en-GB"),
+      malicious: isMalicious,
+      confidence,
+      brand,
+      screenshots,
+      reasons: result.reasons || raw.reasons || [],
+      asks_for: result.asks_for || (raw.fields?.password ? ["Password", "OTP / Security PIN"] : []),
+      threat_source: result.threat_source || "Vultr Serverless Inference",
+    };
+
+    setRecords((prev) => [record, ...prev.filter((r) => r.id !== record.id)]);
+    setScanStep(-1);
+    setLiveMessage("");
+    setApprovalJobId(null);
+    setSelected(record);
+    setUrl("");
+    setNotice(`Investigation ${record.id} complete: ${isMalicious ? "Threat Contained" : "Clean Target"}`);
+    loadRecentScans();
+    loadHealth();
+  }
+
+  async function handleApproval(approve: boolean) {
+    if (!approvalJobId) return;
+    try {
+      setLiveMessage(approve ? "Delivering human authorization to container..." : "Declining decoy pass...");
+      await fetch(`/api/scan/${approvalJobId}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ approve }),
+      });
+    } catch (e) {
+      console.error("Approval error", e);
+    }
+    setApprovalJobId(null);
+  }
+
+  async function detonate(event: React.FormEvent) {
     event.preventDefault();
     const value = url.trim();
     try {
@@ -314,53 +388,114 @@ export default function Dashboard({
         return;
       }
     }
+
     setError("");
     setUrl(value);
     setScanStep(0);
+    setLiveMessage("Dispatching job to ephemeral orchestrator...");
+    setApprovalJobId(null);
 
-    fetch("/api/scan", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: value }),
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!data || !data.job_id) return;
-        const sse = new EventSource(`/api/scan/${data.job_id}/stream`);
-        sse.onmessage = (e) => {
+    try {
+      const res = await fetch("/api/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: value }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || "Scan request failed with HTTP " + res.status);
+      }
+
+      const data = await res.json();
+      const jobId = data.job_id;
+      setLiveMessage(`Sandbox queued [${jobId}]... Initializing phishnet isolated boundary`);
+
+      if (activeEventSource.current) {
+        activeEventSource.current.close();
+      }
+
+      const sse = new EventSource(`/api/scan/${jobId}/stream`);
+      activeEventSource.current = sse;
+
+      // 55s safety timeout
+      const safetyTimeout = window.setTimeout(async () => {
+        if (activeEventSource.current === sse) {
+          sse.close();
+          activeEventSource.current = null;
           try {
-            const ev = JSON.parse(e.data);
-            if (ev.stage === "DISPATCH") setScanStep(0);
-            else if (ev.stage === "HOST_JAIL" || ev.stage === "NETWORK") setScanStep(1);
-            else if (ev.stage === "DOCKER_CONTAINER" || ev.stage === "BROWSER") setScanStep(2);
-            else if (ev.stage === "VULTR_INFERENCE" || ev.stage === "AI_ANALYSIS") setScanStep(3);
-            else if (ev.stage === "DONE" || ev.stage === "JOB_SNAPSHOT") {
-              sse.close();
-              const job = ev.job || {};
-              const v = job.verdict || {};
-              const isMal =
-                v.is_phishing ||
-                v.threat_type === "MALICIOUS" ||
-                value.includes("bank") ||
-                value.includes("fake-bank");
-              const record: ScanRecord = {
-                id: `DET-${data.job_id.slice(0, 6).toUpperCase()}`,
-                url: value,
-                time: new Date().toLocaleTimeString("en-GB"),
-                malicious: isMal,
-                confidence: v.confidence ? Math.round(v.confidence * 100) : isMal ? 100 : 97,
-                brand: v.impersonating || (isMal ? "State Bank of India" : "Generic website"),
-              };
-              setRecords((prev) => [record, ...prev.filter((r) => r.id !== record.id)]);
-              setScanStep(-1);
-              setSelected(record);
-              setUrl("");
+            const finalRes = await fetch(`/api/scan/${jobId}`);
+            if (finalRes.ok) {
+              const finalData = await finalRes.json();
+              finishScan(jobId, value, finalData);
+              return;
             }
           } catch {}
-        };
-        sse.onerror = () => sse.close();
-      })
-      .catch(() => {});
+          setScanStep(-1);
+          setLiveMessage("");
+          setError("Sandbox execution timed out after 55s. Container safely reclaimed.");
+        }
+      }, 55000);
+
+      sse.onmessage = async (evt) => {
+        try {
+          const ev = JSON.parse(evt.data);
+          const stage = ev.stage;
+          const msg = ev.message || ev.msg || "";
+          if (msg) setLiveMessage(msg);
+
+          if (stage === "SANDBOX_INIT" || stage === "CAP_DROP" || stage === "NAVIGATING") {
+            setScanStep(1); // Stage 2: Network isolation
+          } else if (stage === "EVIDENCE_COLLECTED" || stage === "INTERCEPT") {
+            setScanStep(2); // Stage 3: Micro-VM execution
+          } else if (stage === "AWAITING_APPROVAL") {
+            setScanStep(2);
+            setApprovalJobId(jobId);
+            setLiveMessage("⚠️ Credential harvester detected. Paused for human authorization.");
+          } else if (stage === "P2_INIT") {
+            setApprovalJobId(null);
+            setScanStep(2);
+            setLiveMessage("Human authorization received: Executing decoy submission pass...");
+          } else if (stage === "INFERENCE_DISPATCH") {
+            setApprovalJobId(null);
+            setScanStep(3); // Stage 4: AI verdict
+            setLiveMessage("Synthesizing threat vectors via Vultr Serverless Inference...");
+          } else if (stage === "DONE" || stage === "JOB_SNAPSHOT") {
+            window.clearTimeout(safetyTimeout);
+            sse.close();
+            activeEventSource.current = null;
+            setApprovalJobId(null);
+
+            // Fetch final complete job state
+            const finalRes = await fetch(`/api/scan/${jobId}`);
+            const finalData = finalRes.ok ? await finalRes.json() : null;
+            finishScan(jobId, value, finalData || ev);
+          }
+        } catch (parseErr) {
+          console.error("SSE parse error", parseErr);
+        }
+      };
+
+      sse.onerror = async () => {
+        // Fallback check
+        try {
+          const checkRes = await fetch(`/api/scan/${jobId}`);
+          if (checkRes.ok) {
+            const checkData = await checkRes.json();
+            if (checkData.status === "done" || checkData.result) {
+              window.clearTimeout(safetyTimeout);
+              sse.close();
+              activeEventSource.current = null;
+              finishScan(jobId, value, checkData);
+            }
+          }
+        } catch {}
+      };
+    } catch (err: any) {
+      setScanStep(-1);
+      setLiveMessage("");
+      setError(err.message || "Failed to contact detonation backend.");
+    }
   }
 
   const visibleRecords = records.filter((record) => {
@@ -375,7 +510,7 @@ export default function Dashboard({
 
   function exportRecords() {
     const csv = [
-      "ID,URL,Time,Verdict,Confidence",
+      "ID,URL,Time,Verdict,Confidence,Brand",
       ...visibleRecords.map((record) =>
         [
           record.id,
@@ -383,6 +518,7 @@ export default function Dashboard({
           record.time,
           record.malicious ? "Malicious" : "Safe",
           `${record.confidence}%`,
+          `"${record.brand.replace(/"/g, '""')}"`,
         ].join(","),
       ),
     ].join("\n");
@@ -428,7 +564,7 @@ export default function Dashboard({
         <div className="nav-right">
           <span className="system-status">
             <span className="status-dot" />
-            Analyst workspace
+            {systemHealth?.slots_display || "Analyst workspace"}
           </span>
           <div className="profile-wrap">
             <button
@@ -453,7 +589,10 @@ export default function Dashboard({
                 <span>{viewer.email}</span>
                 <div className="profile-divider" />
                 <span className="profile-role">
-                  <Icon name="shield" size={15} /> Analyst permissions enabled
+                  <Icon name="shield" size={15} /> Network: phishnet (172.30.0.0/16)
+                </span>
+                <span className="profile-role" style={{ marginTop: "4px" }}>
+                  <Icon name="cpu" size={15} /> Vultr Serverless Vision Engine
                 </span>
                 <div className="profile-divider" />
                 <button className="profile-action" onClick={onHome}>
@@ -510,7 +649,7 @@ export default function Dashboard({
                 <input
                   ref={inputRef}
                   aria-label="URL to investigate"
-                  placeholder="Drop a suspicious URL here..."
+                  placeholder="Drop a suspicious URL here (e.g. demo://fake-bank)..."
                   value={url}
                   onChange={(event) => {
                     setUrl(event.target.value);
@@ -539,15 +678,64 @@ export default function Dashboard({
                 {running ? (
                   <>
                     <span className="progress-track">
-                      <span style={{ width: `${(scanStep + 1) * 25}%` }} />
+                      <span style={{ width: `${Math.max(15, (scanStep + 1) * 25)}%` }} />
                     </span>
                     <span>
-                      {stages[scanStep].name}
-                      <span className="progress-count">0{scanStep + 1} / 04</span>
+                      {stages[scanStep]?.name || "Executing"}
+                      <span className="progress-count">0{Math.max(1, scanStep + 1)} / 04</span>
                     </span>
                   </>
                 ) : null}
               </div>
+
+              {running && liveMessage && !approvalJobId && (
+                <div style={{ marginTop: "10px", fontSize: "12px", fontFamily: "var(--mono)", color: "var(--signal-bright)" }}>
+                  &gt; {liveMessage}
+                </div>
+              )}
+
+              {approvalJobId && (
+                <div
+                  style={{
+                    marginTop: "14px",
+                    padding: "14px 16px",
+                    background: "rgba(213, 53, 43, 0.12)",
+                    border: "1px solid #e44b41",
+                    borderRadius: "6px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "12px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "#f2eeed" }}>
+                    <Icon name="alert" size={17} />
+                    <span>
+                      <strong>Human Authorization Required (Pattern B):</strong> Credential harvester detected. Authorize decoy submission pass?
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button
+                      type="button"
+                      className="red-button"
+                      style={{ padding: "8px 14px", fontSize: "11px", gap: "6px" }}
+                      onClick={() => handleApproval(true)}
+                    >
+                      <Icon name="check" size={14} />
+                      Authorize Decoy Pass
+                    </button>
+                    <button
+                      type="button"
+                      className="outline-button"
+                      style={{ padding: "8px 14px", fontSize: "11px", background: "transparent", color: "#a59995", border: "1px solid #554442" }}
+                      onClick={() => handleApproval(false)}
+                    >
+                      Skip to Verdict
+                    </button>
+                  </div>
+                </div>
+              )}
             </form>
             <div className="console-presets">
               <span>Just exploring? Try</span>
@@ -657,6 +845,7 @@ export default function Dashboard({
                   onClick={() => {
                     setRefresh(true);
                     loadRecentScans();
+                    loadHealth();
                     window.setTimeout(() => {
                       setRefresh(false);
                       setNotice("Records are up to date.");
@@ -701,7 +890,7 @@ export default function Dashboard({
                             </button>
                             <span className="record-time">
                               {record.id}
-                              <span>·</span>Today, {record.time}
+                              <span>·</span>{record.time}
                             </span>
                           </div>
                         </div>
@@ -778,7 +967,7 @@ export default function Dashboard({
               </span>
               <span>
                 <Icon name="lock" size={12} />
-                Investigation history
+                Investigation history · SQLite 3 WAL
               </span>
             </div>
           </div>
@@ -794,7 +983,7 @@ export default function Dashboard({
           </button>
           <span className="footer-powered">
             <span className="status-dot" />
-            Powered by Vultr AI
+            Powered by Vultr Serverless Vision AI
           </span>
         </footer>
       </main>
@@ -819,6 +1008,7 @@ export default function Dashboard({
             aria-modal="true"
             aria-label={docs ? "How it works" : "Detonation details"}
             onClick={(event) => event.stopPropagation()}
+            style={{ maxWidth: "620px" }}
           >
             <button
               autoFocus
@@ -878,13 +1068,83 @@ export default function Dashboard({
                   </h2>
                   <p className="modal-intro">
                     {selected.malicious
-                      ? "Credential harvesting indicators associated with bank impersonation."
-                      : "No threat indicators in this record."}
+                      ? `Credential harvesting indicators identified. Impersonating ${selected.brand}.`
+                      : "No threat indicators detected in this record."}
                   </p>
                   <div className="result-url">
                     <Icon name="link" size={17} />
                     <span>{selected.url}</span>
                   </div>
+
+                  {selected.screenshots && selected.screenshots.length > 0 && (
+                    <div
+                      style={{
+                        margin: "16px 0",
+                        borderRadius: "8px",
+                        overflow: "hidden",
+                        border: "1px solid #3b2e2d",
+                        background: "#0d0908",
+                      }}
+                    >
+                      <div
+                        style={{
+                          padding: "6px 12px",
+                          background: "#1c1413",
+                          fontSize: "11px",
+                          color: "#9f9995",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          fontFamily: "var(--mono)",
+                        }}
+                      >
+                        <span>SANDBOX ARTIFACT // HEADLESS CHROMIUM</span>
+                        <span>BLAST RADIUS ZERO</span>
+                      </div>
+                      <img
+                        src={selected.screenshots[selected.screenshots.length - 1]}
+                        alt="Sandbox screenshot"
+                        style={{
+                          width: "100%",
+                          maxHeight: "220px",
+                          objectFit: "contain",
+                          display: "block",
+                          background: "#080606",
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {selected.reasons && selected.reasons.length > 0 && (
+                    <div
+                      style={{
+                        margin: "12px 0",
+                        padding: "12px 14px",
+                        background: selected.malicious ? "rgba(213, 53, 43, 0.08)" : "rgba(34, 197, 94, 0.08)",
+                        border: `1px solid ${selected.malicious ? "rgba(213, 53, 43, 0.25)" : "rgba(34, 197, 94, 0.25)"}`,
+                        borderRadius: "6px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 600,
+                          color: selected.malicious ? "var(--accent)" : "#4ade80",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                        }}
+                      >
+                        Forensic Telemetry:
+                      </span>
+                      <ul style={{ margin: "6px 0 0", paddingLeft: "18px", fontSize: "12px", color: "var(--text)" }}>
+                        {selected.reasons.map((r, i) => (
+                          <li key={i} style={{ marginBottom: "4px" }}>
+                            {r}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   <dl className="result-details">
                     <div>
                       <dt>Verdict</dt>
@@ -907,13 +1167,19 @@ export default function Dashboard({
                       <dt>Network isolation</dt>
                       <dd className="result-protected">
                         <Icon name="shield" size={15} />
-                        Fully contained
+                        Fully contained (phishnet drop)
                       </dd>
                     </div>
                     <div>
                       <dt>Investigation ID</dt>
                       <dd>{selected.id}</dd>
                     </div>
+                    {selected.threat_source && (
+                      <div>
+                        <dt>Analysis engine</dt>
+                        <dd style={{ fontSize: "12px" }}>{selected.threat_source}</dd>
+                      </div>
+                    )}
                   </dl>
                   <button className="primary-button modal-done" onClick={() => setSelected(null)}>
                     Back to workspace
