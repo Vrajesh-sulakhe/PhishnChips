@@ -179,7 +179,8 @@ def health_check():
     return {
         "status": "healthy",
         "service": "phish-n-chips-backend",
-        "control_plane": "Vultr BLR (4 vCPU / 8 GB)",
+        "control_plane": "Vultr Cloud Compute BLR (4 vCPUs / 8192 MB RAM / 160 GB SSD)",
+        "reverse_dns": "139.84.159.12.vultrusercontent.com",
         "active_sandboxes": active_sandboxes,
         "max_sandboxes": max_sandboxes,
         "slots_display": f"{active_sandboxes} / {max_sandboxes} Sandboxes Active",

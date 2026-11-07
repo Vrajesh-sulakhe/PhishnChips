@@ -74,7 +74,7 @@ Target users: everyday people (especially in India) who receive scam links on Wh
 5. UI shows a **Containment Log** panel, for example:
    ```
    14:02:11  Container created (id a1b2c3)
-   14:02:11  Limits applied: 1 CPU, 1 GB RAM, 256 PIDs, 45 s timeout
+   14:02:11  Container quotas: 2 vCPUs, 2 GB RAM, 512 PIDs, 14s timeout (Host: 4 vCPUs / 8192 MB RAM / 160 GB SSD)
    14:02:11  Network: public internet only, host + private ranges blocked
    14:02:11  Secrets inside sandbox: none
    14:02:19  Link opened, 3 screenshots captured

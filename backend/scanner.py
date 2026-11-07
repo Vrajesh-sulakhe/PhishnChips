@@ -97,9 +97,9 @@ async def run_docker_sandbox(job_id: str, url: str, submit_pass: bool = False) -
         "docker", "run", "--rm",
         f"--name={container_name}",
         "--network=phishnet",
-        "--memory=1g", "--memory-swap=1g",
-        "--cpus=1",
-        "--pids-limit=256",
+        "--memory=2g", "--memory-swap=2g",
+        "--cpus=2",
+        "--pids-limit=512",
         "--cap-drop=ALL",
         "--security-opt=no-new-privileges",
         "--read-only",
@@ -114,7 +114,7 @@ async def run_docker_sandbox(job_id: str, url: str, submit_pass: bool = False) -
     ]
 
     log_event(job_id, f"Docker container spun up under phishnet network boundary (id {container_name})", stage=stage_prefix)
-    log_event(job_id, f"Enforced: --cap-drop=ALL, 1024MB RAM, 1.0 CPU, 256 PIDs, {SCAN_TIMEOUT_SECONDS}s hard timeout ({TOTAL_BUDGET_SECONDS:.0f}s end-to-end budget)", stage="CAP_DROP")
+    log_event(job_id, f"Sandbox Quotas: 2.0 vCPUs, 2048MB RAM, 512 PIDs, {SCAN_TIMEOUT_SECONDS}s hard timeout (Host Specs: 4 vCPUs, 8192MB RAM, 160GB SSD)", stage="CAP_DROP")
     log_event(job_id, "Network: public internet only, host + private ranges blocked via iptables", stage="CAP_DROP")
     log_event(job_id, "Secrets inside sandbox: none (zero API keys or credentials injected)", stage="CAP_DROP")
     log_event(job_id, f"Detonating target in headless Chromium: {url}", stage="NAVIGATING")
