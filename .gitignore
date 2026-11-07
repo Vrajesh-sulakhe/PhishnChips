@@ -17,6 +17,11 @@ evidence/
 logs/
 *.log
 
+# Node.js
+node_modules/
+dist/
+.superpowers/
+
 # OS & Editor
 .DS_Store
 Thumbs.db

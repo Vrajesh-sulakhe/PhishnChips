@@ -64,7 +64,7 @@ app.add_middleware(
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
-assets_dir = BASE_DIR / "assets" if (BASE_DIR / "assets").exists() else FRONTEND_DIR / "assets"
+assets_dir = FRONTEND_DIR / "assets" if (FRONTEND_DIR / "assets").exists() else BASE_DIR / "assets"
 if assets_dir.exists():
     app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
@@ -126,10 +126,10 @@ def serve_app_js_root():
 @app.api_route("/dashboard", methods=["GET", "HEAD"])
 @app.api_route("/product", methods=["GET", "HEAD"])
 def serve_console_root():
-    console_file = FRONTEND_DIR / "console.html"
-    if not console_file.exists():
-        console_file = FRONTEND_DIR / "index.html"
-    return FileResponse(console_file)
+    index_file = FRONTEND_DIR / "index.html"
+    if not index_file.exists():
+        index_file = BASE_DIR / "index.html"
+    return FileResponse(index_file)
 
 @app.api_route("/login", methods=["GET", "HEAD"])
 @app.api_route("/signup", methods=["GET", "HEAD"])

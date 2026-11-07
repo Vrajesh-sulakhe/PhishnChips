@@ -13,6 +13,8 @@ echo "=========================================================="
 echo "==> Step 1: Syncing workspace files to Vultr VM..."
 rsync -avz --delete \
   --exclude 'backend/venv' \
+  --exclude 'node_modules' \
+  --exclude '.superpowers' \
   --exclude 'evidence' \
   --exclude 'data' \
   --exclude 'logs' \
