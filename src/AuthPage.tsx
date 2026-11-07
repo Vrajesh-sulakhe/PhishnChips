@@ -22,7 +22,11 @@ export default function AuthPage({
   const [error, setError] = useState<string | null>(null);
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
 
+  // Temporarily disable Google OAuth button while origins are being configured in GCP
+  const ENABLE_GOOGLE_AUTH = false;
+
   useEffect(() => {
+    if (!ENABLE_GOOGLE_AUTH) return;
     let mounted = true;
     fetch("/api/config")
       .then((r) => (r.ok ? r.json() : null))
@@ -34,10 +38,10 @@ export default function AuthPage({
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [ENABLE_GOOGLE_AUTH]);
 
   useEffect(() => {
-    if (!googleClientId) return;
+    if (!ENABLE_GOOGLE_AUTH || !googleClientId) return;
 
     function renderGoogleBtn() {
       if (window.google?.accounts?.id) {
@@ -175,7 +179,7 @@ export default function AuthPage({
                 ? "A little curiosity. A lot of protection."
                 : "Your next investigation is waiting."}
             </p>
-            {googleClientId && (
+            {ENABLE_GOOGLE_AUTH && googleClientId && (
               <div style={{ marginBottom: "20px" }}>
                 <div
                   id="google-signin-target"

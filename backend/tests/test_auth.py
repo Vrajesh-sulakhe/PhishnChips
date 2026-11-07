@@ -90,3 +90,4 @@ def test_admin_access_register():
     assert any("Google Cloud Platform" in s for s in systems)
     assert any("Vultr Serverless" in s for s in systems)
     assert any("SQLite" in s for s in systems)
+
