@@ -16,6 +16,59 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 TARGET_URL = os.getenv("TARGET_URL", "").strip()
 SUBMIT_PASS = os.getenv("SUBMIT_PASS", "0").lower() in ("1", "true", "yes")
 OUT_DIR = os.getenv("OUT_DIR", "/out")
+NAV_TIMEOUT_MS = int(os.getenv("NAV_TIMEOUT_MS", "10000"))   # hard cap for the main navigation
+SETTLE_MS = int(os.getenv("SETTLE_MS", "1500"))               # time for JS / delayed injections to run
+
+# Anti-evasion: equivalent of puppeteer-extra-plugin-stealth's core evasions, applied via
+# an init script so they run before any page script (cloaking kits probe these immediately).
+STEALTH_JS = r"""
+(() => {
+  const def = (o, k, v) => { try { Object.defineProperty(o, k, { get: () => v, configurable: true }); } catch (e) {} };
+  def(Navigator.prototype, 'webdriver', undefined);
+  def(Navigator.prototype, 'languages', ['en-US', 'en']);
+  def(Navigator.prototype, 'plugins', [1, 2, 3, 4, 5]);
+  def(Navigator.prototype, 'hardwareConcurrency', 8);
+  def(Navigator.prototype, 'deviceMemory', 8);
+  if (!window.chrome) { window.chrome = { runtime: {}, loadTimes: function () {}, csi: function () {}, app: {} }; }
+  const q = window.navigator.permissions && window.navigator.permissions.query;
+  if (q) { window.navigator.permissions.query = (p) => p && p.name === 'notifications'
+      ? Promise.resolve({ state: Notification.permission }) : q.call(window.navigator.permissions, p); }
+  const patchGL = (proto) => { if (!proto) return; const g = proto.getParameter;
+    proto.getParameter = function (p) { if (p === 37445) return 'Intel Inc.'; if (p === 37446) return 'Intel Iris OpenGL Engine'; return g.call(this, p); }; };
+  patchGL(window.WebGLRenderingContext && WebGLRenderingContext.prototype);
+  patchGL(window.WebGL2RenderingContext && WebGL2RenderingContext.prototype);
+})();
+"""
+
+# Behavioural interception: record login UI injected after load (modals, overlays, foreign iframes).
+MUTATION_JS = r"""
+(() => {
+  window.__pc_mutations = [];
+  const note = (kind, detail) => { if (window.__pc_mutations.length < 20) window.__pc_mutations.push({ kind, detail: String(detail).slice(0, 200) }); };
+  const inspect = (el) => {
+    if (!(el instanceof Element)) return;
+    const q = (sel) => el.matches && el.matches(sel) || el.querySelector && el.querySelector(sel);
+    if (q('input[type=password]')) {
+      const st = getComputedStyle(el);
+      note(st.position === 'fixed' || st.position === 'absolute' ? 'login_modal' : 'login_form', el.tagName + '#' + (el.id || ''));
+    }
+    if (el.tagName === 'IFRAME') {
+      try { const u = new URL(el.src, location.href); if (u.hostname !== location.hostname) note('credential_iframe', u.href); } catch (e) {}
+    }
+  };
+  const start = () => new MutationObserver((muts) => muts.forEach((m) => m.addedNodes.forEach(inspect)))
+      .observe(document.documentElement, { childList: true, subtree: true });
+  if (document.documentElement) start(); else document.addEventListener('DOMContentLoaded', start);
+})();
+"""
+
+_TWO_LABEL = {"co", "com", "org", "net", "gov", "edu", "ac", "nic", "or", "go", "ne"}
+
+def apex_of(host):
+    labels = (host or "").lower().split(".")
+    if len(labels) >= 3 and labels[-2] in _TWO_LABEL and len(labels[-1]) == 2:
+        return ".".join(labels[-3:])
+    return ".".join(labels[-2:])
 
 if not TARGET_URL:
     print(json.dumps({"error": "TARGET_URL environment variable is required"}))
@@ -41,6 +94,12 @@ result = {
         "inputs": []
     },
     "form_actions": [],
+    "forms": [],
+    "iframes": [],
+    "dom_mutations": [],
+    "post_requests": [],
+    "redirect_chain_detail": [],
+    "js_navigations": [],
     "external_domains": [],
     "blocked_events": [],
     "screenshots": [],
@@ -72,16 +131,22 @@ with sync_playwright() as p:
                 "--disable-dev-shm-usage",
                 "--disable-gpu",
                 "--no-zygote",
+                "--disable-blink-features=AutomationControlled",
                 "--single-process"
             ]
         )
 
         context = browser.new_context(
             viewport={"width": 1280, "height": 800},
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 PhishChips/1.0",
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
             accept_downloads=False,
-            ignore_https_errors=True
+            ignore_https_errors=True,
+            locale="en-US",
+            timezone_id="America/New_York",
+            java_script_enabled=True,
         )
+        context.add_init_script(STEALTH_JS)
+        context.add_init_script(MUTATION_JS)
 
         page = context.new_page()
 
@@ -111,6 +176,9 @@ with sync_playwright() as p:
             d = get_domain(req.url)
             if d and base_domain and d != base_domain:
                 external_domains_set.add(d)
+            # Credential exfiltration candidates: state-changing requests leaving the site.
+            if req.method in ("POST", "PUT") and d and apex_of(d) != apex_of(base_domain) and len(result["post_requests"]) < 20:
+                result["post_requests"].append({"url": req.url[:300], "method": req.method, "resource_type": req.resource_type})
 
         page.on("request", on_request)
 
@@ -122,16 +190,25 @@ with sync_playwright() as p:
                 loc = res.headers.get("location")
                 if loc:
                     redirect_chain.append(loc)
+                    result["redirect_chain_detail"].append({"from": res.url[:300], "status": res.status, "to": loc[:300]})
 
         page.on("response", on_response)
 
+        # Client-side navigations (window.location swaps, meta refresh) on the top frame.
+        def on_nav(frame):
+            if frame == page.main_frame and frame.url and frame.url not in redirect_chain:
+                result["js_navigations"].append(frame.url[:300])
+                redirect_chain.append(frame.url)
+
+        page.on("framenavigated", on_nav)
+
         # Navigate with hard timeout (20s)
         try:
-            resp = page.goto(nav_url, wait_until="load", timeout=20000)
+            resp = page.goto(nav_url, wait_until="load", timeout=NAV_TIMEOUT_MS)
             if resp and resp.status >= 400:
                 result["http_status"] = resp.status
         except PlaywrightTimeoutError:
-            result["error"] = "Navigation timed out (20s limit reached)"
+            result["error"] = f"Navigation timed out ({NAV_TIMEOUT_MS // 1000}s limit reached)"
         except Exception as ex:
             err_str = str(ex)
             if "CERT" in err_str.upper() or "SSL" in err_str.upper():
@@ -139,7 +216,7 @@ with sync_playwright() as p:
             result["error"] = f"Navigation error: {err_str}"
 
         # Wait briefly for dynamic JS and client-side rendering
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(SETTLE_MS)
 
         # Update final URL and redirect chain
         result["final_url"] = page.url
@@ -192,6 +269,27 @@ with sync_playwright() as p:
             extracted_forms = page.evaluate("""() => {
                 const forms = Array.from(document.querySelectorAll('form'));
                 const actions = forms.map(f => f.action).filter(Boolean);
+                const otpRe = /(^|[^a-z])(otp|2fa|mfa|passcode|one[-_ ]?time|verification[-_ ]?code|security[-_ ]?code|pin)([^a-z]|$)/i;
+                const cardRe = /(^|[^a-z])(card[-_ ]?(number|no|num)?|cc[-_ ]?(num|number)|cvv|cvc|expir(y|ation)|debit|credit[-_ ]?card)([^a-z]|$)/i;
+                const formInfo = forms.slice(0, 15).map(f => {
+                    const ins = Array.from(f.querySelectorAll('input, select, textarea'));
+                    const label = i => [i.name, i.id, i.placeholder, i.autocomplete].join(' ');
+                    return {
+                        action: f.action || location.href,
+                        method: (f.method || 'get').toLowerCase(),
+                        input_count: ins.length,
+                        has_password: ins.some(i => (i.type || '').toLowerCase() === 'password'),
+                        has_otp: ins.some(i => ['text','tel','number','password'].includes((i.type || 'text').toLowerCase()) && otpRe.test(label(i))),
+                        has_card: ins.some(i => ['text','tel','number'].includes((i.type || 'text').toLowerCase()) && cardRe.test(label(i))),
+                    };
+                });
+                const iframes = Array.from(document.querySelectorAll('iframe')).slice(0, 15).map(fr => {
+                    let cross = false, host = '';
+                    try { const u = new URL(fr.src, location.href); host = u.hostname; cross = u.hostname !== location.hostname; } catch (e) {}
+                    const r = fr.getBoundingClientRect();
+                    return { src: (fr.src || '').slice(0, 300), host, cross_origin: cross, visible: r.width > 20 && r.height > 20 };
+                });
+                const mutations = window.__pc_mutations || [];
                 
                 const allInputs = Array.from(document.querySelectorAll('input, select, textarea'));
                 const inputs = allInputs.map(i => ({
@@ -202,27 +300,33 @@ with sync_playwright() as p:
                     autocomplete: i.autocomplete || ''
                 }));
 
-                return { actions, inputs };
+                return { actions, inputs, formInfo, iframes, mutations };
             }""")
 
             result["form_actions"] = extracted_forms.get("actions", [])
+            result["forms"] = extracted_forms.get("formInfo", [])
+            result["iframes"] = extracted_forms.get("iframes", [])
+            result["dom_mutations"] = extracted_forms.get("mutations", [])
             inputs_list = extracted_forms.get("inputs", [])
             result["fields"]["inputs"] = inputs_list
 
             password_count = sum(1 for i in inputs_list if i["type"] == "password")
             
-            otp_pattern = re.compile(r"(otp|code|pin|2fa|verification|passcode|token)", re.IGNORECASE)
-            card_pattern = re.compile(r"(card|cvv|cvc|pan|expir|debit|credit)", re.IGNORECASE)
+            # Whole-token matching on text-like inputs only: substrings such as "expand", "discard",
+            # "zipcode", "spinner" or "searchToken" must never count as OTP / card fields.
+            otp_pattern = re.compile(r"(^|[^a-z])(otp|2fa|mfa|passcode|one[-_ ]?time|verification[-_ ]?code|security[-_ ]?code|pin)([^a-z]|$)", re.IGNORECASE)
+            card_pattern = re.compile(r"(^|[^a-z])(card[-_ ]?(number|no|num)?|cc[-_ ]?(num|number)|cvv|cvc|expir(y|ation)|debit|credit[-_ ]?card)([^a-z]|$)", re.IGNORECASE)
+            text_like = ("text", "tel", "number", "password")
 
-            otp_count = sum(1 for i in inputs_list if (
-                otp_pattern.search(i.get("name", "")) or 
-                otp_pattern.search(i.get("placeholder", "")) or 
+            otp_count = sum(1 for i in inputs_list if i.get("type") in text_like and (
+                otp_pattern.search(i.get("name", "")) or
+                otp_pattern.search(i.get("placeholder", "")) or
                 otp_pattern.search(i.get("id", ""))
             ))
 
-            card_count = sum(1 for i in inputs_list if (
-                card_pattern.search(i.get("name", "")) or 
-                card_pattern.search(i.get("placeholder", "")) or 
+            card_count = sum(1 for i in inputs_list if i.get("type") in ("text", "tel", "number") and (
+                card_pattern.search(i.get("name", "")) or
+                card_pattern.search(i.get("placeholder", "")) or
                 card_pattern.search(i.get("id", ""))
             ))
 

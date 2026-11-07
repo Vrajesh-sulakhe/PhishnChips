@@ -2527,3 +2527,11 @@ td {
     transition: none !important;
   }
 }
+
+/* Non-conclusive outcomes are visually distinct from confirmed threats. */
+.verdict.suspicious,
+.verdict.indeterminate {
+  background: #3a3220;
+  border: 1px solid #5f5230;
+  color: #e6d49a;
+}

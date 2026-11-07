@@ -183,3 +183,22 @@ The included `deploy.sh` script executes a 1-command sync, build, dependency ins
 
 Built for the **Vultr Agent Rush Hackathon** (November 2026).  
 *Fresh phish, fried in a sandbox.* 🐟🍟
+
+---
+
+## Detection Pipeline (two-tier) & False-Positive Controls
+
+```
+URL -> validate/SSRF -> queue -> Docker sandbox (Playwright, stealth, behavioural interception)
+    -> Tier 1: reputation gate (Tranco top-10K, user-content hosts excluded) + physical-signal heuristics
+         reputable apex, landed on itself, no anomaly  -> BENIGN (model never consulted)
+    -> Tier 2: reasoning model w/ rich evidence + screenshot -> strict Pydantic schema -> reconcile
+    -> verdict: benign | suspicious | malicious | indeterminate   (+ confidence, indicators, evidence_chain)
+```
+
+* **Only physical evidence can convict.** `malicious` needs a hard signal (credential form posting off-site, brand mimicry *with* credential capture, covert download, off-apex redirect from a trusted origin, injected login UI). Lexical hints (TLD, URL length/edit tokens, brand words, hop count) can reach `suspicious` at most.
+* **The model cannot convict alone**, and cannot return free text: output must validate against `backend/schemas.py`.
+* **Failures are never malicious.** Timeout (20s end-to-end budget), API error, rate limit, schema drift or analyzer crash produce `indeterminate` (Analysis Incomplete, Retry / Manual Review).
+* **Observability:** `GET /metrics` (Prometheus) and `GET /api/health`; one JSON log line per scan; the exact model payload is saved to `evidence/<job>/inference_payload.json`.
+* **Tests:** `cd backend && pip install -r requirements-dev.txt && pytest -q` (unit + 500/500 golden gate, FPR must be < 0.1%). Regenerate fixtures with `python tests/golden/build_golden.py`; live containerised run: `python tests/golden/run_golden.py --live urls.csv`.
+* Rebuild the sandbox image after pulling (`docker build -t phishchips-sandbox sandbox/`) to pick up the hardened inspector.

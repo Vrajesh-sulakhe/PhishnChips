@@ -25,6 +25,8 @@ load_dotenv()
 from validation import validate_url, check_rate_limit, ValidationError
 from events import init_job_events, get_events, subscribe_job_events, unsubscribe_job_events
 import scanner
+import metrics
+import reputation
 import db
 import auth
 
@@ -157,8 +159,18 @@ def health_check():
         "inference_endpoint": "api.vultrinference.com",
         "inference_status": "Connected (api.vultrinference.com)" if api_key_set else "Standby (Deterministic Heuristics Active)",
         "sandbox_image": "phishchips-sandbox",
-        "database": "SQLite 3 (WAL mode)"
+        "database": "SQLite 3 (WAL mode)",
+        "queue_depth": scanner.get_queue_depth(),
+        "time_budget_seconds": scanner.TOTAL_BUDGET_SECONDS,
+        "reputation_list_size": reputation.reputation_list_size(),
+        "metrics": metrics.snapshot(),
     }
+
+@app.get("/metrics")
+def prometheus_metrics():
+    """Prometheus scrape endpoint (inference latency, sandbox timeouts, verdict mix, drift proxies)."""
+    body, content_type = metrics.render()
+    return Response(content=body, media_type=content_type)
 
 @app.get("/api/config")
 def get_public_config():
@@ -287,6 +299,9 @@ async def start_scan(req: ScanRequest, request: Request):
             status_code=429,
             detail="Rate limit exceeded (maximum 20 scans per minute). Please try again shortly."
         )
+
+    if not scanner.queue_has_capacity():
+        raise HTTPException(status_code=503, detail="Analysis queue is full. Please retry shortly.")
 
     try:
         validated_url = validate_url(req.url)

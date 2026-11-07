@@ -10,14 +10,20 @@ echo "=========================================================="
 echo "    PHISH&CHIPS: DEPLOYING TO VULTR VM (${SERVER_IP})     "
 echo "=========================================================="
 
+echo "==> Step 0: Building production frontend assets..."
+npm run build
+
 echo "==> Step 1: Syncing workspace files to Vultr VM..."
 rsync -avz --delete \
   --exclude '.env*' \
+  --exclude '.venv' \
   --exclude 'backend/venv' \
+  --exclude 'backend/__pycache__' \
   --exclude 'node_modules' \
   --exclude '.superpowers' \
   --exclude 'evidence' \
-  --exclude 'data' \
+  --exclude '/data' \
+  --exclude '*.db*' \
   --exclude 'logs' \
   --exclude '.git' \
   --exclude '.DS_Store' \
@@ -32,7 +38,16 @@ ssh -i "$KEY_PATH" root@${SERVER_IP} << 'REMOTE_EXEC'
   cd /root/phish-n-chips
 
   echo "--> Ensuring directories exist..."
-  mkdir -p evidence logs data scripts backend frontend sandbox demo/fake-pages deploy
+  mkdir -p evidence logs data backend/data scripts backend frontend sandbox demo/fake-pages deploy
+
+  echo "--> Ensuring production guardrails in .env..."
+  if [ -f .env ]; then
+    grep -q "TOTAL_BUDGET_SECONDS" .env || echo "TOTAL_BUDGET_SECONDS=20" >> .env
+    grep -q "MAX_QUEUE_DEPTH" .env || echo "MAX_QUEUE_DEPTH=50" >> .env
+    grep -q "REPUTATION_TOP_N" .env || echo "REPUTATION_TOP_N=10000" >> .env
+    sed -i 's/^SCAN_TIMEOUT_SECONDS=45/SCAN_TIMEOUT_SECONDS=14/' .env
+    chmod 600 .env
+  fi
 
   echo "--> Setting up phishnet isolated network & iptables containment..."
   bash scripts/setup_network.sh
@@ -64,7 +79,10 @@ ssh -i "$KEY_PATH" root@${SERVER_IP} << 'REMOTE_EXEC'
   systemctl status phishchips.service --no-pager || true
 
   echo "--> Health check verification..."
-  curl -s http://127.0.0.1:8000/health || (echo "Health check failed!" && exit 1)
+  curl -fsS http://127.0.0.1:8000/health || (echo "Health check failed!" && exit 1)
+  echo ""
+  echo "--> Metrics check verification..."
+  curl -fsS http://127.0.0.1:8000/metrics | grep -E "phishchips_scans|phishchips_active_scans" | head -n 5
   echo ""
 REMOTE_EXEC
 
@@ -72,4 +90,5 @@ echo "=========================================================="
 echo "🎉 DEPLOYMENT COMPLETE!"
 echo "   🔒 Secure HTTPS : https://${HTTPS_DOMAIN}"
 echo "   ⚡ Direct HTTP   : http://${SERVER_IP}:8000"
+echo "   📊 Metrics       : https://${HTTPS_DOMAIN}/metrics"
 echo "=========================================================="

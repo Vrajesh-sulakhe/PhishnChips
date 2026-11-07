@@ -149,11 +149,16 @@ export function Icon({
   );
 }
 
+export type Outcome = "benign" | "suspicious" | "malicious" | "indeterminate";
+
 export type ScanRecord = {
   id: string;
   url: string;
   time: string;
   malicious: boolean;
+  outcome?: Outcome;
+  threat_type?: string;
+  evidence_chain?: string[];
   confidence: number;
   brand: string;
   screenshots?: string[];
@@ -161,6 +166,60 @@ export type ScanRecord = {
   asks_for?: string[];
   threat_source?: string;
 };
+
+/** Single source of truth for verdict interpretation. Only an explicit malicious verdict is "malicious":
+ *  suspicious / indeterminate (timeout, API failure) must never be rendered as a confirmed threat. */
+function outcomeFrom(v: any): Outcome {
+  const c = String(v?.verdict_class || "").toLowerCase();
+  if (c === "benign" || c === "suspicious" || c === "malicious" || c === "indeterminate") return c;
+  const legacy = String(v?.verdict || "").toUpperCase();
+  if (legacy === "SCAM" || legacy === "MALICIOUS") return "malicious";
+  if (legacy === "SUSPICIOUS") return "suspicious";
+  if (legacy === "SAFE" || legacy === "BENIGN") return "benign";
+  return "indeterminate";
+}
+
+const outcomeText: Record<Outcome, string> = {
+  benign: "Safe",
+  suspicious: "Suspicious",
+  malicious: "Malicious",
+  indeterminate: "Manual review",
+};
+
+const threatTypeText: Record<string, string> = {
+  credential_harvest: "Credential harvester",
+  malware_delivery: "Malware delivery",
+  open_redirect: "Open redirect",
+  scareware: "Scareware",
+  suspicious_behavior: "Suspicious behavior",
+};
+
+function outcomeOf(r: ScanRecord): Outcome {
+  return r.outcome ?? (r.malicious ? "malicious" : "benign");
+}
+
+function verdictClass(r: ScanRecord): string {
+  const o = outcomeOf(r);
+  return o === "benign" ? "safe" : o;
+}
+
+function outcomeTone(r: ScanRecord): { bg: string; border: string; fg: string } {
+  switch (outcomeOf(r)) {
+    case "malicious":
+      return { bg: "rgba(213, 53, 43, 0.08)", border: "rgba(213, 53, 43, 0.25)", fg: "var(--accent)" };
+    case "benign":
+      return { bg: "rgba(34, 197, 94, 0.08)", border: "rgba(34, 197, 94, 0.25)", fg: "#4ade80" };
+    default:
+      return { bg: "rgba(234, 179, 8, 0.08)", border: "rgba(234, 179, 8, 0.25)", fg: "#facc15" };
+  }
+}
+
+function threatLabel(r: ScanRecord): string {
+  const o = outcomeOf(r);
+  if (o === "benign") return "No threats found";
+  if (o === "indeterminate") return "Analysis incomplete";
+  return threatTypeText[r.threat_type || ""] || (o === "malicious" ? "Malicious activity" : "Needs review");
+}
 
 const bankPresetUrl = "demo://fake-bank";
 
@@ -245,11 +304,8 @@ export default function Dashboard({
       const data = await res.json();
       if (data && Array.isArray(data.scans) && data.scans.length > 0) {
         const mapped: ScanRecord[] = data.scans.map((s: any) => {
-          const isMalicious =
-            s.verdict === "MALICIOUS" ||
-            s.verdict === "SCAM" ||
-            s.verdict === "scam" ||
-            (s.confidence && s.confidence >= 0.7 && s.verdict !== "SAFE");
+          const outcome = outcomeFrom(s);
+          const isMalicious = outcome === "malicious";
           const timeStr = s.created_at
             ? new Date(s.created_at).toLocaleTimeString("en-GB")
             : "Recent";
@@ -258,12 +314,9 @@ export default function Dashboard({
             url: s.target_url || "",
             time: timeStr,
             malicious: isMalicious,
-            confidence: s.confidence
-              ? Math.round(s.confidence > 1 ? s.confidence : s.confidence * 100)
-              : isMalicious
-                ? 100
-                : 95,
-            brand: s.pretending_to_be || (isMalicious ? "State Bank of India" : "Generic website"),
+            outcome,
+            confidence: Math.round((s.confidence || 0) > 1 ? s.confidence : (s.confidence || 0) * 100),
+            brand: s.pretending_to_be || "Generic website",
             screenshots: s.screenshots || [],
             reasons: s.reasons || [],
             asks_for: s.asks_for || [],
@@ -315,21 +368,11 @@ export default function Dashboard({
     }
     const result = data.result || data.verdict || {};
     const raw = data.raw_telemetry || data.raw_result || {};
-    const isMalicious =
-      result.verdict === "SCAM" ||
-      result.verdict === "MALICIOUS" ||
-      result.is_phishing === true ||
-      targetUrl.includes("fake-bank") ||
-      targetUrl.includes("bank");
-    const confidence = result.confidence
-      ? Math.round(result.confidence > 1 ? result.confidence : result.confidence * 100)
-      : isMalicious
-        ? 100
-        : 95;
-    const brand =
-      result.pretending_to_be ||
-      result.impersonating ||
-      (isMalicious ? "State Bank of India" : "Generic website");
+    // Verdict comes only from the backend; never infer maliciousness from URL substrings.
+    const outcome = outcomeFrom(result);
+    const isMalicious = outcome === "malicious";
+    const confidence = Math.round((result.confidence || 0) > 1 ? result.confidence : (result.confidence || 0) * 100);
+    const brand = result.pretending_to_be || result.impersonating || "Generic website";
     const screenshots =
       data.screenshots && data.screenshots.length > 0
         ? data.screenshots
@@ -340,6 +383,9 @@ export default function Dashboard({
       url: targetUrl,
       time: new Date().toLocaleTimeString("en-GB"),
       malicious: isMalicious,
+      outcome,
+      threat_type: result.threat_type,
+      evidence_chain: result.evidence_chain || [],
       confidence,
       brand,
       screenshots,
@@ -354,7 +400,7 @@ export default function Dashboard({
     setApprovalJobId(null);
     setSelected(record);
     setUrl("");
-    setNotice(`Investigation ${record.id} complete: ${isMalicious ? "Threat Contained" : "Clean Target"}`);
+    setNotice(`Investigation ${record.id} complete: ${isMalicious ? "Threat Contained" : outcome === "benign" ? "Clean Target" : outcome === "suspicious" ? "Flagged for review" : "Analysis incomplete, retry"}`);
     loadRecentScans();
     loadHealth();
   }
@@ -500,7 +546,7 @@ export default function Dashboard({
 
   const visibleRecords = records.filter((record) => {
     const text =
-      `${record.url} ${record.brand} ${record.malicious ? "malicious credential harvester" : "safe completed"}`.toLowerCase();
+      `${record.url} ${record.brand} ${outcomeText[outcomeOf(record)]} ${threatLabel(record)}`.toLowerCase();
     return (
       text.includes(search.toLowerCase()) &&
       (filter === "All records" ||
@@ -516,7 +562,7 @@ export default function Dashboard({
           record.id,
           `"${record.url.replace(/"/g, '""')}"`,
           record.time,
-          record.malicious ? "Malicious" : "Safe",
+          outcomeText[outcomeOf(record)],
           `${record.confidence}%`,
           `"${record.brand.replace(/"/g, '""')}"`,
         ].join(","),
@@ -897,7 +943,7 @@ export default function Dashboard({
                       </td>
                       <td>
                         <span className="threat-type">
-                          {record.malicious ? "Credential harvester" : "No threats found"}
+                          {threatLabel(record)}
                         </span>
                         <span className="cell-subtitle">
                           {record.malicious ? record.brand : "Caged detonation"}
@@ -923,9 +969,9 @@ export default function Dashboard({
                         </div>
                       </td>
                       <td>
-                        <span className={`verdict ${record.malicious ? "malicious" : "safe"}`}>
+                        <span className={`verdict ${verdictClass(record)}`}>
                           <span className="verdict-dot" />
-                          {record.malicious ? "Malicious" : "Safe"}
+                          {outcomeText[outcomeOf(record)]}
                         </span>
                       </td>
                       <td>
@@ -1064,12 +1110,22 @@ export default function Dashboard({
                   </span>
                   <div className="eyebrow">INVESTIGATION COMPLETE</div>
                   <h2>
-                    {selected.malicious ? "A threat. Safely contained." : "A clean bill of health."}
+                    {selected.malicious
+                      ? "A threat. Safely contained."
+                      : outcomeOf(selected) === "benign"
+                        ? "A clean bill of health."
+                        : outcomeOf(selected) === "suspicious"
+                          ? "Flagged for manual review."
+                          : "Analysis incomplete. Retry."}
                   </h2>
                   <p className="modal-intro">
                     {selected.malicious
-                      ? `Credential harvesting indicators identified. Impersonating ${selected.brand}.`
-                      : "No threat indicators detected in this record."}
+                      ? `${threatLabel(selected)} indicators confirmed in the sandbox${selected.brand !== "Generic website" ? `. Impersonating ${selected.brand}` : ""}.`
+                      : outcomeOf(selected) === "benign"
+                        ? "No threat indicators detected in this record."
+                        : outcomeOf(selected) === "suspicious"
+                          ? "Anomalies were observed but not conclusive. A human should review this record."
+                          : "The analysis did not finish within the time budget. This is NOT a threat verdict; retry the scan."}
                   </p>
                   <div className="result-url">
                     <Icon name="link" size={17} />
@@ -1119,8 +1175,8 @@ export default function Dashboard({
                       style={{
                         margin: "12px 0",
                         padding: "12px 14px",
-                        background: selected.malicious ? "rgba(213, 53, 43, 0.08)" : "rgba(34, 197, 94, 0.08)",
-                        border: `1px solid ${selected.malicious ? "rgba(213, 53, 43, 0.25)" : "rgba(34, 197, 94, 0.25)"}`,
+                        background: outcomeTone(selected).bg,
+                        border: `1px solid ${outcomeTone(selected).border}`,
                         borderRadius: "6px",
                       }}
                     >
@@ -1128,7 +1184,7 @@ export default function Dashboard({
                         style={{
                           fontSize: "11px",
                           fontWeight: 600,
-                          color: selected.malicious ? "var(--accent)" : "#4ade80",
+                          color: outcomeTone(selected).fg,
                           textTransform: "uppercase",
                           letterSpacing: "0.05em",
                         }}
@@ -1149,9 +1205,9 @@ export default function Dashboard({
                     <div>
                       <dt>Verdict</dt>
                       <dd>
-                        <span className={`verdict ${selected.malicious ? "malicious" : "safe"}`}>
+                        <span className={`verdict ${verdictClass(selected)}`}>
                           <span className="verdict-dot" />
-                          {selected.malicious ? "Malicious" : "Safe"}
+                          {outcomeText[outcomeOf(selected)]}
                         </span>
                       </dd>
                     </div>
@@ -1161,7 +1217,7 @@ export default function Dashboard({
                     </div>
                     <div>
                       <dt>Threat classification</dt>
-                      <dd>{selected.malicious ? "Credential harvester" : "No threats detected"}</dd>
+                      <dd>{threatLabel(selected)}</dd>
                     </div>
                     <div>
                       <dt>Network isolation</dt>

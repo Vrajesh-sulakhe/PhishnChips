@@ -1,11 +1,20 @@
 """
-heuristics.py - Explainable Threat Detection Heuristics for Phish&Chips.
-Detects brand impersonation, deceptive credential harvesting, and suspicious redirects.
+heuristics.py - Explainable threat signals for Phish&Chips.
+
+Signals are split by evidential strength:
+  * HARD signals - physically observed in the sandbox (credential form posting off-site,
+    covert download, off-apex redirect from a reputable origin, brand mismatch *with*
+    credential capture, injected login overlay). Only these can support a malicious verdict.
+  * SOFT signals - lexical/structural hints (TLD, shortener, '@', hop count, brand word on
+    page, credential fields on an unknown site). These can raise "suspicious" at most and are
+    never sufficient for "malicious" on their own.
 """
 
-from urllib.parse import urlparse
-from typing import Dict, Any, List, Optional, Tuple
 import re
+from typing import Dict, Any, List, Optional
+from urllib.parse import urlparse
+
+from reputation import apex_domain, is_reputable, is_user_content_host, same_site
 
 BRAND_CATALOG: Dict[str, Dict[str, Any]] = {
     "State Bank of India": {
@@ -86,9 +95,10 @@ SHORTENERS = {
 def extract_domain(url: str) -> str:
     try:
         p = urlparse(url)
-        return (p.netloc.split(":")[0] or "").lower()
+        return (p.hostname or "").lower()
     except Exception:
         return ""
+
 
 def is_domain_match(page_domain: str, allowed_domains: List[str]) -> bool:
     for allowed in allowed_domains:
@@ -96,31 +106,60 @@ def is_domain_match(page_domain: str, allowed_domains: List[str]) -> bool:
             return True
     return False
 
+
+_BRAND_PATTERNS = {
+    name: re.compile(r"(?<![a-z0-9])(?:" + "|".join(re.escape(k) for k in info["keywords"]) + r")(?![a-z0-9])")
+    for name, info in BRAND_CATALOG.items()
+}
+
+
+def _brand_in_head(title: str, text: str, pattern: "re.Pattern") -> bool:
+    """Brand must appear as a whole word in the title or the opening of the visible text."""
+    return bool(pattern.search(title) or pattern.search(text[:800]))
+
+
+def _form_has_credentials(form: Dict[str, Any]) -> bool:
+    return bool(form.get("has_password") or form.get("has_otp") or form.get("has_card"))
+
+
 def evaluate_heuristics(result_data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Computes deterministic security signals, brand-vs-domain mismatch,
-    credential harvesting indicators, and explainable reasons.
-    """
-    final_url = result_data.get("final_url", "")
+    """Compute explainable signals. Returns legacy keys plus `hard_signals` / `soft_signals`."""
+    final_url = result_data.get("final_url", "") or ""
+    requested_url = result_data.get("url", "") or final_url
     final_domain = extract_domain(final_url)
+    final_apex = apex_domain(final_domain)
     title = (result_data.get("title") or "").lower()
     text = (result_data.get("text") or "").lower()
-    fields = result_data.get("fields", {})
+    fields = result_data.get("fields", {}) or {}
     password_count = fields.get("password", 0)
     otp_count = fields.get("otp_like", 0)
     card_count = fields.get("card_like", 0)
-    inputs = fields.get("inputs", [])
-    redirect_chain = result_data.get("redirect_chain", [])
-    form_actions = result_data.get("form_actions", [])
-    blocked_events = result_data.get("blocked_events", [])
+    inputs = fields.get("inputs", []) or []
+    redirect_chain = result_data.get("redirect_chain", []) or []
+    form_actions = result_data.get("form_actions", []) or []
+    forms = result_data.get("forms", []) or []
+    blocked_events = result_data.get("blocked_events", []) or []
+    mutations = result_data.get("dom_mutations", []) or []
+    post_requests = result_data.get("post_requests", []) or []
+    has_credentials = (password_count + otp_count + card_count) > 0
 
-    score = 0
+    reputable_landing = is_reputable(final_url)
+    reputable_origin = is_reputable(requested_url)
+
+    hard: List[Dict[str, Any]] = []
+    soft: List[Dict[str, Any]] = []
     reasons: List[str] = []
     indicators: List[str] = []
     pretending_to_be: Optional[str] = None
     asks_for: List[str] = []
 
-    # 1. Asks For Data Tagging
+    def add(bucket, weight, code, indicator, reason=None):
+        bucket.append({"code": code, "weight": weight, "indicator": indicator})
+        indicators.append(indicator)
+        if reason:
+            reasons.append(reason)
+
+    # Asks-for tagging
     if password_count > 0:
         asks_for.append("Password")
     if otp_count > 0:
@@ -132,87 +171,106 @@ def evaluate_heuristics(result_data: Dict[str, Any]) -> Dict[str, Any]:
     if any(i.get("type") == "email" or "email" in i.get("name", "").lower() for i in inputs):
         asks_for.append("Email Address")
 
-    # 2. Brand-vs-Domain Mismatch Detection
-    for brand_name, brand_info in BRAND_CATALOG.items():
-        matched_kw = False
-        for kw in brand_info["keywords"]:
-            if kw in title or kw in text:
-                matched_kw = True
-                break
-
-        if matched_kw:
-            is_legit = is_domain_match(final_domain, brand_info["domains"])
-            if not is_legit:
-                pretending_to_be = brand_name
-                score += 65
-                msg = f"Impersonates {brand_name}, but is hosted on unofficial domain ({final_domain})."
-                reasons.append(msg)
-                indicators.append(f"Brand Impersonation: {brand_name} mismatch on {final_domain}")
-                break
-            else:
-                # Legit domain of the brand
+    # --- Brand mimicry (skipped entirely for verified reputable apex that is not user-content) ---
+    brand_hit = None
+    if not reputable_landing:
+        for brand_name, info in BRAND_CATALOG.items():
+            if not _brand_in_head(title, text, _BRAND_PATTERNS[brand_name]):
+                continue
+            if is_domain_match(final_domain, info["domains"]):
                 indicators.append(f"Verified Brand Domain: Belongs to {brand_name}")
+                break
+            brand_hit = brand_name
+            break
+    if brand_hit:
+        pretending_to_be = brand_hit
+        msg = f"Impersonates {brand_hit}, but is hosted on unofficial domain ({final_domain})."
+        if has_credentials:
+            add(hard, 70, "brand_mismatch_credentials", f"Brand Impersonation: {brand_hit} mismatch on {final_domain}", msg)
+        else:
+            add(soft, 25, "brand_word_mismatch", f"Brand mention without official domain: {brand_hit}", None)
 
-    # 3. Form Credential Targeting on Unverified Domains
-    if (password_count > 0 or otp_count > 0 or card_count > 0) and not pretending_to_be:
-        # Check if it's not a known brand
-        score += 35
-        reasons.append(f"Requests sensitive authentication credentials ({', '.join(asks_for)}) on an unverified domain.")
-        indicators.append("Credential Harvest: Login / OTP fields present")
+    # --- Credential capture sending data off-site (per-form when available) ---
+    exfil_hosts: List[str] = []
+    if forms:
+        for f in forms:
+            act = extract_domain(f.get("action", ""))
+            if _form_has_credentials(f) and act and not same_site(act, final_domain):
+                if not (reputable_landing and is_reputable(f.get("action", ""))):
+                    exfil_hosts.append(act)
+    else:
+        for action in form_actions:
+            act = extract_domain(action)
+            if has_credentials and act and final_domain and not same_site(act, final_domain):
+                if not (reputable_landing and is_reputable(action)):
+                    exfil_hosts.append(act)
+    if exfil_hosts:
+        add(hard, 70, "cross_origin_credential_form", f"Credential Form Exfiltration -> {exfil_hosts[0]}",
+            f"Credential form submits to an external destination ({exfil_hosts[0]}).")
 
-    # 4. Automatic Download Interceptions (Containment Moment Signal)
-    downloads_blocked = [e for e in blocked_events if e.get("type") == "download"]
-    if downloads_blocked:
-        score += 50
-        detail = downloads_blocked[0].get("detail", "Automatic file download triggered")
-        reasons.append(f"Attempted covert automatic file download inside sandbox: {detail}")
-        indicators.append("Malicious Delivery: Auto-download attempted")
-
-    # 5. Form Actions Posting Across Domains
-    for action in form_actions:
-        action_domain = extract_domain(action)
-        if action_domain and final_domain and action_domain != final_domain:
-            score += 25
-            reasons.append(f"Form submission exfiltrates data to external destination ({action_domain}).")
-            indicators.append(f"Cross-Domain Form Exfiltration -> {action_domain}")
+    for pr in post_requests:
+        h = extract_domain(pr.get("url", ""))
+        if has_credentials and h and not same_site(h, final_domain) and not is_reputable(pr.get("url", "")):
+            add(hard, 70, "credential_exfil_request", f"Outbound POST to unverified host {h}",
+                f"Page sent a POST request to an unverified external host ({h}) while collecting credentials.")
             break
 
-    # 6. Redirect Traversals
-    if len(redirect_chain) > 2:
-        score += 15
-        reasons.append(f"Navigated through a multi-hop redirection chain ({len(redirect_chain)} hops).")
-        indicators.append(f"Evasion Technique: {len(redirect_chain)}-hop redirect chain")
+    # --- Dynamic DOM anomalies ---
+    for m in mutations:
+        if m.get("kind") in ("login_modal", "credential_iframe") and not reputable_landing:
+            add(hard, 60, "injected_login_ui", f"Dynamically injected {m.get('kind')}", "Login UI was injected into the page after load.")
+            break
 
-    # 7. URL Domain Anomalies
+    # --- Covert downloads ---
+    downloads = [e for e in blocked_events if e.get("type") == "download"]
+    if downloads and not (reputable_landing and reputable_origin):
+        add(hard, 55, "auto_download", "Malicious Delivery: Auto-download attempted",
+            f"Attempted covert automatic file download inside sandbox: {downloads[0].get('detail', 'download')}")
+
+    # --- Open redirect / landing hijack from a reputable origin ---
+    if reputable_origin and final_apex and not same_site(requested_url, final_url) and not reputable_landing:
+        add(hard, 70, "off_apex_redirect", f"Reputable origin redirected to unverified apex {final_apex}",
+            f"Trusted domain redirected to an unverified destination ({final_apex}).")
+
+    # --- Soft signals ---
+    if has_credentials and not brand_hit and not reputable_landing and not exfil_hosts:
+        add(soft, 35, "credentials_on_unverified", "Credential Fields on Unverified Domain",
+            f"Requests sensitive credentials ({', '.join(asks_for)}) on an unverified domain.")
+
+    distinct_apexes = []
+    for hop in redirect_chain:
+        a = apex_domain(hop)
+        if a and a not in distinct_apexes:
+            distinct_apexes.append(a)
+    if len(distinct_apexes) > 2 and not reputable_origin:
+        add(soft, 15, "multi_apex_redirect", f"Evasion Technique: redirect through {len(distinct_apexes)} distinct domains",
+            f"Navigated across {len(distinct_apexes)} distinct domains before landing.")
+
     parts = final_domain.split(".")
-    if len(parts) > 1:
-        tld = parts[-1]
-        if tld in SUSPICIOUS_TLDS:
-            score += 20
-            reasons.append(f"Registered on a high-risk TLD commonly associated with burner scam sites (.{tld}).")
-            indicators.append(f"Suspicious TLD: .{tld}")
-
-    if final_domain.startswith("xn--"):
-        score += 30
-        reasons.append("Uses Punycode / IDN lookalike characters to disguise domain identity.")
-        indicators.append("Punycode / Homograph lookalike domain")
-
+    if len(parts) > 1 and parts[-1] in SUSPICIOUS_TLDS and not reputable_landing:
+        add(soft, 20, "risky_tld", f"Suspicious TLD: .{parts[-1]}", f"Hosted on a high-risk TLD (.{parts[-1]}).")
+    if final_domain.startswith("xn--") or ".xn--" in final_domain:
+        add(soft, 30, "punycode", "Punycode / Homograph lookalike domain", "Uses punycode/IDN characters that can disguise identity.")
     if final_domain in SHORTENERS:
-        score += 15
-        indicators.append(f"URL Shortener link: {final_domain}")
+        add(soft, 15, "shortener", f"URL Shortener link: {final_domain}")
+    try:
+        if "@" in (urlparse(final_url).netloc or ""):
+            add(soft, 25, "userinfo_url", "URL Obfuscation with '@' syntax", "URL embeds credentials notation to obscure destination.")
+    except ValueError:
+        pass
+    if is_user_content_host(final_url) and has_credentials:
+        add(soft, 30, "credentials_on_ugc_host", "Credential capture on multi-tenant hosting platform")
+    age = (result_data.get("domain_intel") or {}).get("age_days")
+    if age is not None and age < 30 and not reputable_landing:
+        add(soft, 25, "young_domain", f"Domain registered {age} days ago", f"Domain is only {age} days old.")
 
-    if "@" in final_url:
-        score += 25
-        reasons.append("URL contains '@' credential notation to obscure true destination.")
-        indicators.append("URL Obfuscation with '@' syntax")
+    hard_score = sum(s["weight"] for s in hard)
+    soft_score = sum(s["weight"] for s in soft)
+    score = min(100, hard_score + soft_score)
 
-    # Clamp score
-    score = min(100, max(0, score))
-
-    # Verdict assignment
-    if score >= 65:
+    if hard and hard_score + soft_score >= 65:
         verdict = "SCAM"
-    elif score >= 35:
+    elif hard or soft_score >= 35:
         verdict = "SUSPICIOUS"
     else:
         verdict = "SAFE"
@@ -225,6 +283,7 @@ def evaluate_heuristics(result_data: Dict[str, Any]) -> Dict[str, Any]:
         "pretending_to_be": pretending_to_be,
         "asks_for": asks_for,
         "reasons": reasons[:3],
-        "indicators": indicators
+        "indicators": indicators,
+        "hard_signals": hard,
+        "soft_signals": soft,
     }
-
