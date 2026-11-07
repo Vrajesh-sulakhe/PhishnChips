@@ -62,6 +62,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def redirect_raw_ip_to_https(request: Request, call_next):
+    host = request.headers.get("host", "")
+    # If a user is visiting via raw IP in a browser, redirect to the valid HTTPS domain (required by Google OAuth)
+    if "139.84.159.12" in host and not host.endswith("sslip.io"):
+        accept = request.headers.get("accept", "")
+        if request.method == "GET" and "text/html" in accept and not request.url.path.startswith("/api"):
+            redirect_url = f"https://139.84.159.12.sslip.io{request.url.path}"
+            if request.url.query:
+                redirect_url += f"?{request.url.query}"
+            return Response(status_code=307, headers={"Location": redirect_url})
+    return await call_next(request)
+
 # Mount static frontend assets
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
