@@ -266,11 +266,14 @@ async def process_scan_job(job_id: str, url: str):
                     target_url=url,
                     status="error",
                     user_id=job.get("user_id"),
-                    verdict="ERROR",
+                    verdict="UNKNOWN",
                     confidence=0.0,
                     threat_source="Sandbox Runtime Abort",
                     screenshots=job.get("screenshots", []),
-                    reasons=[f"Scan aborted: {str(e)}"]
+                    reasons=[f"Scan aborted: {str(e)}"],
+                    threat_type="none",
+                    verdict_class="indeterminate",
+                    evidence_chain=[],
                 )
             except Exception:
                 pass
@@ -307,6 +310,9 @@ def _finish_job(job_id: str, url: str, job: Dict[str, Any], started: float) -> N
             reasons=verdict_data.get("reasons", []),
             asks_for=verdict_data.get("asks_for", []),
             pretending_to_be=verdict_data.get("pretending_to_be"),
+            threat_type=verdict_data.get("threat_type"),
+            verdict_class=verdict_data.get("verdict_class"),
+            evidence_chain=verdict_data.get("evidence_chain", []),
         )
     except Exception as dbe:
         print(f"Error persisting scan to DB: {dbe}")

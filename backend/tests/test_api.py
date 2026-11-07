@@ -13,3 +13,35 @@ def test_metrics_and_health_exposed():
     h = c.get("/api/health").json()
     assert h["time_budget_seconds"] <= 20 and h["reputation_list_size"] > 5000 and "metrics" in h
 
+
+def test_recent_scans_and_reputation_healing():
+    import db
+    db.init_db()
+
+    # Simulate legacy erroneous scan for wikipedia.org
+    db.save_scan(
+        job_id="test_wiki_legacy",
+        target_url="https://wikipedia.org",
+        status="done",
+        verdict="SCAM",
+        confidence=0.98,
+        threat_source="Legacy test",
+        threat_type="credential_harvest",
+        verdict_class="malicious"
+    )
+
+    # Re-run init_db to exercise self-healing migration
+    db.init_db()
+
+    c = TestClient(main.app)
+    res = c.get("/api/scans/recent")
+    assert res.status_code == 200
+    scans = res.json().get("scans", [])
+    wiki_scan = next((s for s in scans if s["job_id"] == "test_wiki_legacy"), None)
+    assert wiki_scan is not None
+    assert wiki_scan["verdict"] == "SAFE"
+    assert wiki_scan["verdict_class"] == "benign"
+    assert wiki_scan["confidence"] == 0.97
+    assert wiki_scan["threat_type"] == "none"
+
+

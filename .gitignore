@@ -16,6 +16,10 @@ env/
 evidence/
 logs/
 *.log
+data/
+*.db
+*.db-wal
+*.db-shm
 
 # Node.js
 node_modules/

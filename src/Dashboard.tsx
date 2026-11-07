@@ -170,6 +170,13 @@ export type ScanRecord = {
 /** Single source of truth for verdict interpretation. Only an explicit malicious verdict is "malicious":
  *  suspicious / indeterminate (timeout, API failure) must never be rendered as a confirmed threat. */
 function outcomeFrom(v: any): Outcome {
+  // Defensive guard: if telemetry explicitly confirms legitimate domain or verified top-tier domain without hard anomalies, never classify as malicious
+  const reasonsText = Array.isArray(v?.reasons) ? v.reasons.join(" ").toLowerCase() : "";
+  if (reasonsText.includes("landed on legitimate") || reasonsText.includes("verified top-tier domain")) {
+    if (!reasonsText.includes("credential form submits") && !reasonsText.includes("auto-download attempted") && !reasonsText.includes("outbound post")) {
+      return "benign";
+    }
+  }
   const c = String(v?.verdict_class || "").toLowerCase();
   if (c === "benign" || c === "suspicious" || c === "malicious" || c === "indeterminate") return c;
   const legacy = String(v?.verdict || "").toUpperCase();
@@ -315,8 +322,10 @@ export default function Dashboard({
             time: timeStr,
             malicious: isMalicious,
             outcome,
+            threat_type: s.threat_type || (isMalicious ? "credential_harvest" : "none"),
+            evidence_chain: s.evidence_chain || [],
             confidence: Math.round((s.confidence || 0) > 1 ? s.confidence : (s.confidence || 0) * 100),
-            brand: s.pretending_to_be || "Generic website",
+            brand: s.pretending_to_be || (isMalicious ? "Generic website" : "Authentic portal"),
             screenshots: s.screenshots || [],
             reasons: s.reasons || [],
             asks_for: s.asks_for || [],
