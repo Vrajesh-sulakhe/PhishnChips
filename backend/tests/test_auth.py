@@ -91,3 +91,69 @@ def test_admin_access_register():
     assert any("Vultr Serverless" in s for s in systems)
     assert any("SQLite" in s for s in systems)
 
+
+def test_account_specific_scans_isolation():
+    """Verify that recent scans are strictly scoped to the authenticated account."""
+    client1 = TestClient(main.app)
+    client2 = TestClient(main.app)
+    anon_client = TestClient(main.app)
+
+    # 1. Register User A and User B
+    r1 = client1.post("/api/auth/register", json={
+        "email": "userA@phishchips.test",
+        "password": "PasswordUserA123!",
+        "name": "User Alpha"
+    })
+    user_a_id = r1.json()["user"]["id"]
+
+    r2 = client2.post("/api/auth/register", json={
+        "email": "userB@phishchips.test",
+        "password": "PasswordUserB123!",
+        "name": "User Beta"
+    })
+    user_b_id = r2.json()["user"]["id"]
+
+    # 2. Persist scans for each user
+    db.save_scan(
+        job_id="job_alpha_01",
+        target_url="https://alpha-threat.com",
+        status="done",
+        user_id=user_a_id,
+        verdict="SCAM",
+        confidence=0.95,
+        threat_type="credential_harvest",
+        verdict_class="malicious"
+    )
+    db.save_scan(
+        job_id="job_beta_01",
+        target_url="https://beta-safe.org",
+        status="done",
+        user_id=user_b_id,
+        verdict="SAFE",
+        confidence=0.99,
+        threat_type="none",
+        verdict_class="benign"
+    )
+
+    # 3. Anonymous visitor receives an empty list (no leakage)
+    anon_res = anon_client.get("/api/scans/recent")
+    assert anon_res.status_code == 200
+    assert anon_res.json()["scans"] == []
+
+    # 4. User A only sees User A's scans
+    res_a = client1.get("/api/scans/recent")
+    assert res_a.status_code == 200
+    scans_a = res_a.json()["scans"]
+    assert len(scans_a) == 1
+    assert scans_a[0]["job_id"] == "job_alpha_01"
+    assert scans_a[0]["target_url"] == "https://alpha-threat.com"
+
+    # 5. User B only sees User B's scans
+    res_b = client2.get("/api/scans/recent")
+    assert res_b.status_code == 200
+    scans_b = res_b.json()["scans"]
+    assert len(scans_b) == 1
+    assert scans_b[0]["job_id"] == "job_beta_01"
+    assert scans_b[0]["target_url"] == "https://beta-safe.org"
+
+

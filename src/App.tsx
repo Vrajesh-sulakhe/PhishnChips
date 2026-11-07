@@ -53,7 +53,11 @@ export default function App() {
 
   // Sync session with backend /api/auth/me on mount
   useEffect(() => {
-    fetch("/api/auth/me")
+    const token = window.sessionStorage.getItem("phishchips_token");
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    fetch("/api/auth/me", { credentials: "same-origin", headers })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && data.authenticated && data.user && data.user.email) {
@@ -66,6 +70,9 @@ export default function App() {
         } else {
           writeViewerSession(null);
           setViewer(null);
+          try {
+            window.sessionStorage.removeItem("phishchips_token");
+          } catch {}
         }
       })
       .catch(() => {});
@@ -103,7 +110,10 @@ export default function App() {
         viewer={currentViewer}
         onHome={() => navigate("home")}
         onSignOut={() => {
-          fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+          fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => {});
+          try {
+            window.sessionStorage.removeItem("phishchips_token");
+          } catch {}
           writeViewerSession(null);
           setViewer(null);
           navigate("home");

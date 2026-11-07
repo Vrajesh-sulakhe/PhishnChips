@@ -230,42 +230,7 @@ function threatLabel(r: ScanRecord): string {
 
 const bankPresetUrl = "demo://fake-bank";
 
-const initialRecords: ScanRecord[] = [
-  {
-    id: "DET-0084",
-    url: bankPresetUrl,
-    time: "10:42:08",
-    malicious: true,
-    confidence: 100,
-    brand: "State Bank of India",
-    reasons: [
-      "Impersonates State Bank of India, but is hosted on unofficial domain.",
-      "Attempted covert automatic file download inside sandbox: SBI_Mandatory_Security_Patch.exe",
-    ],
-    asks_for: ["Password", "OTP / Security PIN"],
-    threat_source: "Vultr Serverless Inference (Llama-3-8B-Instruct)",
-  },
-  {
-    id: "DET-0083",
-    url: "https://example.com",
-    time: "10:38:24",
-    malicious: false,
-    confidence: 95,
-    brand: "Generic website",
-    reasons: ["No credential harvesting forms, deceptive branding, or unauthorized downloads detected."],
-    threat_source: "Deterministic Containment Heuristics",
-  },
-  {
-    id: "DET-0082",
-    url: "https://wikipedia.org",
-    time: "10:35:12",
-    malicious: false,
-    confidence: 99,
-    brand: "Wikipedia",
-    reasons: ["No threats found. Authentic encyclopedia knowledge repository."],
-    threat_source: "Deterministic Containment Heuristics",
-  },
-];
+const initialRecords: ScanRecord[] = [];
 
 const stages = [
   { icon: "globe" as IconName, name: "Client dispatch", detail: "Secure URL handoff" },
@@ -306,10 +271,21 @@ export default function Dashboard({
 
   const loadRecentScans = async () => {
     try {
-      const res = await fetch("/api/scans/recent");
+      const token = window.sessionStorage.getItem("phishchips_token");
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch("/api/scans/recent", {
+        credentials: "same-origin",
+        headers,
+      });
       if (!res.ok) return;
       const data = await res.json();
-      if (data && Array.isArray(data.scans) && data.scans.length > 0) {
+      if (data && Array.isArray(data.scans)) {
+        if (data.scans.length === 0) {
+          setRecords([]);
+          return;
+        }
         const mapped: ScanRecord[] = data.scans.map((s: any) => {
           const outcome = outcomeFrom(s);
           const isMalicious = outcome === "malicious";
@@ -451,9 +427,14 @@ export default function Dashboard({
     setApprovalJobId(null);
 
     try {
+      const token = window.sessionStorage.getItem("phishchips_token");
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
       const res = await fetch("/api/scan", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        headers,
         body: JSON.stringify({ url: value }),
       });
 
@@ -1002,16 +983,25 @@ export default function Dashboard({
               {visibleRecords.length === 0 && (
                 <div className="empty-state">
                   <Icon name="search" size={28} />
-                  <h3>No matching records</h3>
-                  <p>Try another domain or change your filters.</p>
-                  <button
-                    onClick={() => {
-                      setSearch("");
-                      setFilter("All records");
-                    }}
-                  >
-                    Clear filters
-                  </button>
+                  {records.length === 0 ? (
+                    <>
+                      <h3>No investigations in this workspace</h3>
+                      <p>Your account has no detonations recorded yet. Submit a URL above to inspect and contain threats in the sandbox.</p>
+                    </>
+                  ) : (
+                    <>
+                      <h3>No matching records</h3>
+                      <p>Try another domain or change your filters.</p>
+                      <button
+                        onClick={() => {
+                          setSearch("");
+                          setFilter("All records");
+                        }}
+                      >
+                        Clear filters
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>

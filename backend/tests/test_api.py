@@ -16,13 +16,25 @@ def test_metrics_and_health_exposed():
 
 def test_recent_scans_and_reputation_healing():
     import db
+    import uuid
     db.init_db()
+
+    c = TestClient(main.app)
+    test_email = f"wiki_{uuid.uuid4().hex[:6]}@phishchips.test"
+    reg = c.post("/api/auth/register", json={
+        "email": test_email,
+        "password": "Password123!",
+        "name": "Wiki Tester"
+    })
+    assert reg.status_code == 200
+    user_id = reg.json()["user"]["id"]
 
     # Simulate legacy erroneous scan for wikipedia.org
     db.save_scan(
         job_id="test_wiki_legacy",
         target_url="https://wikipedia.org",
         status="done",
+        user_id=user_id,
         verdict="SCAM",
         confidence=0.98,
         threat_source="Legacy test",
@@ -33,7 +45,6 @@ def test_recent_scans_and_reputation_healing():
     # Re-run init_db to exercise self-healing migration
     db.init_db()
 
-    c = TestClient(main.app)
     res = c.get("/api/scans/recent")
     assert res.status_code == 200
     scans = res.json().get("scans", [])

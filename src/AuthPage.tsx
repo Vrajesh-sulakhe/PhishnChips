@@ -126,6 +126,11 @@ export default function AuthPage({
         return;
       }
       if (data?.user) {
+        if (data.token) {
+          try {
+            window.sessionStorage.setItem("phishchips_token", data.token);
+          } catch {}
+        }
         onComplete({ name: data.user.name, email: data.user.email });
         setPassword("");
         setSubmitting(false);

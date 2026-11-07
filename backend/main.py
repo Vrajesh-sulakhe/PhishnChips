@@ -377,9 +377,19 @@ async def get_user_scans(request: Request):
     return {"user_id": user["id"], "scans": scans}
 
 @app.get("/api/scans/recent")
-def get_recent_scans():
-    """Retrieves platform-wide recent scan activity from SQLite database."""
-    scans = db.get_recent_scans(limit=15)
+def get_recent_scans(request: Request, global_view: bool = False):
+    """
+    Retrieves recent scans strictly scoped to the currently authenticated user account.
+    If global_view is requested, returns platform-wide scans.
+    If unauthenticated and global_view is False, returns an empty list so workspaces remain private.
+    """
+    user = auth.get_current_user_optional(request)
+    if global_view:
+        scans = db.get_recent_scans(limit=25)
+    elif user:
+        scans = db.get_user_scans(user["id"], limit=25)
+    else:
+        scans = []
     return {"scans": scans}
 
 @app.get("/api/stats")

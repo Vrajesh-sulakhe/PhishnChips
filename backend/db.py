@@ -468,6 +468,7 @@ def save_scan(
                 pretending_to_be, threat_type, verdict_class, evidence_chain_json, created_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(job_id) DO UPDATE SET
+                user_id = COALESCE(excluded.user_id, scans.user_id),
                 status = excluded.status,
                 verdict = excluded.verdict,
                 confidence = excluded.confidence,
