@@ -19,6 +19,7 @@ export default function AuthPage({
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -98,52 +99,38 @@ export default function AuthPage({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    setError(null);
     setSubmitting(true);
-    const resolvedName = name.trim() || email.split("@")[0].replace(/[._-]/g, " ") || "Analyst";
-    const resolvedEmail = email.trim();
-    try {
-      const res = await fetch("/api/auth/demo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: resolvedName, email: resolvedEmail }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.user) {
-          onComplete({ name: data.user.name, email: data.user.email });
-          setPassword("");
-          setSubmitting(false);
-          return;
-        }
-      }
-    } catch {}
-    setSubmitting(false);
-    onComplete({ name: resolvedName, email: resolvedEmail });
-    setPassword("");
-  }
+    const resolvedName = name.trim();
+    const resolvedEmail = email.trim().toLowerCase();
 
-  async function handleDemoLogin() {
-    setSubmitting(true);
+    const endpoint = signup ? "/api/auth/register" : "/api/auth/login";
+    const body = signup
+      ? { email: resolvedEmail, password, name: resolvedName }
+      : { email: resolvedEmail, password };
+
     try {
-      const res = await fetch("/api/auth/demo", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: "SecOps Lead Analyst",
-          email: "analyst@phishchips.internal",
-        }),
+        body: JSON.stringify(body),
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.user) {
-          onComplete({ name: data.user.name, email: data.user.email });
-          setSubmitting(false);
-          return;
-        }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.detail || "Authentication failed. Please verify your details.");
+        setSubmitting(false);
+        return;
       }
-    } catch {}
+      if (data?.user) {
+        onComplete({ name: data.user.name, email: data.user.email });
+        setPassword("");
+        setSubmitting(false);
+        return;
+      }
+    } catch {
+      setError("Unable to connect to authentication server. Please retry.");
+    }
     setSubmitting(false);
-    onComplete({ name: "SecOps Lead Analyst", email: "analyst@phishchips.internal" });
   }
 
   return (
@@ -215,6 +202,23 @@ export default function AuthPage({
               </div>
             )}
             <form onSubmit={submit}>
+              {error && (
+                <div
+                  style={{
+                    margin: "0 0 16px 0",
+                    padding: "10px 14px",
+                    background: "rgba(213, 53, 43, 0.12)",
+                    border: "1px solid rgba(213, 53, 43, 0.35)",
+                    borderRadius: "6px",
+                    color: "#f87171",
+                    fontSize: "12px",
+                    fontFamily: "var(--mono)",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {error}
+                </div>
+              )}
               {signup && (
                 <label className="auth-field">
                   Full name
@@ -266,33 +270,6 @@ export default function AuthPage({
               <button className="red-button auth-submit" type="submit" disabled={submitting}>
                 {submitting ? "Authenticating..." : signup ? "Create workspace" : "Sign in"}
                 <Icon name="arrow" size={18} />
-              </button>
-
-              <div style={{ margin: "16px 0 10px", textAlign: "center" }}>
-                <span style={{ color: "#a59995", fontSize: "11px", letterSpacing: "0.05em" }}>
-                  — OR QUICK DEMO —
-                </span>
-              </div>
-              <button
-                type="button"
-                className="outline-button auth-demo-btn"
-                disabled={submitting}
-                style={{
-                  width: "100%",
-                  justifyContent: "center",
-                  gap: "8px",
-                  padding: "12px",
-                  border: "1px dashed #d5352b",
-                  color: "#f2eeed",
-                  background: "rgba(213, 53, 43, 0.08)",
-                  cursor: "pointer",
-                  fontFamily: "var(--mono)",
-                  fontSize: "12px",
-                }}
-                onClick={handleDemoLogin}
-              >
-                <Icon name="shield" size={15} />
-                Instant Demo Access (Lead Analyst)
               </button>
             </form>
             <p className="auth-switch">

@@ -1,12 +1,15 @@
 """
 db.py - SQLite Database Engine with WAL Mode for Phish&Chips.
-Provides lightweight, zero-configuration ACID storage for users, sessions, and scan history.
+Provides lightweight, zero-configuration ACID storage for users, sessions, scan history,
+and the Admin Access Register.
 """
 
 import os
 import json
 import sqlite3
 import uuid
+import hashlib
+import secrets
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional, Dict, Any, List
@@ -30,8 +33,42 @@ def get_db_connection() -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys = ON;")
     return conn
 
+# --- Password Cryptography (PBKDF2-HMAC-SHA256) ---
+
+def hash_password(password: str) -> tuple[str, str]:
+    """Generates a cryptographically strong hash and salt using PBKDF2-HMAC-SHA256 (100,000 iterations)."""
+    salt = secrets.token_hex(16)
+    pw_hash = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt.encode("utf-8"),
+        100000
+    ).hex()
+    return pw_hash, salt
+
+def verify_password(password: str, password_hash: str, salt: str) -> bool:
+    """Verifies a plaintext password against stored hash and salt in constant time."""
+    if not password or not password_hash or not salt:
+        return False
+    calc_hash = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt.encode("utf-8"),
+        100000
+    ).hex()
+    return secrets.compare_digest(calc_hash, password_hash)
+
+def safe_user(row: Optional[sqlite3.Row]) -> Optional[Dict[str, Any]]:
+    """Sanitizes user dictionary by excluding sensitive password hash and salt."""
+    if not row:
+        return None
+    d = dict(row)
+    d.pop("password_hash", None)
+    d.pop("salt", None)
+    return d
+
 def init_db():
-    """Initializes tables and indices."""
+    """Initializes tables, indexes, and applies additive migrations."""
     with get_db_connection() as conn:
         conn.executescript("""
         CREATE TABLE IF NOT EXISTS users (
@@ -39,9 +76,11 @@ def init_db():
             email TEXT UNIQUE NOT NULL,
             name TEXT NOT NULL,
             avatar_url TEXT,
-            provider TEXT NOT NULL DEFAULT 'google',
+            provider TEXT NOT NULL DEFAULT 'email',
             provider_id TEXT,
             role TEXT NOT NULL DEFAULT 'analyst',
+            password_hash TEXT,
+            salt TEXT,
             created_at TEXT NOT NULL,
             last_login TEXT NOT NULL
         );
@@ -70,32 +109,166 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
         );
 
+        CREATE TABLE IF NOT EXISTS admin_access_register (
+            admin_id TEXT PRIMARY KEY,
+            system_or_tool VARCHAR(255) NOT NULL,
+            category VARCHAR(100) DEFAULT 'Security',
+            main_admin VARCHAR(255) NOT NULL,
+            backup_admin VARCHAR(255),
+            department VARCHAR(255) DEFAULT 'SecOps',
+            access_level VARCHAR(100) DEFAULT 'Full',
+            number_of_admin_users INTEGER CHECK (number_of_admin_users >= 0) DEFAULT 1,
+            billing_owner VARCHAR(255),
+            plan VARCHAR(255),
+            seats INTEGER CHECK (seats >= 0) DEFAULT 1,
+            renewal_date DATE,
+            company_owned_account BOOLEAN DEFAULT 1,
+            shared_login BOOLEAN DEFAULT 0,
+            password_manager_entry VARCHAR(255),
+            two_factor_on BOOLEAN DEFAULT 1,
+            last_access_review DATE,
+            next_access_review DATE,
+            offboarding_checklist_item VARCHAR(255),
+            risk_level VARCHAR(100) DEFAULT 'Low',
+            status VARCHAR(100) DEFAULT 'Provisioned',
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+
         CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
         CREATE INDEX IF NOT EXISTS idx_scans_user_id ON scans(user_id);
         CREATE INDEX IF NOT EXISTS idx_scans_created_at ON scans(created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_admin_access_register_status ON admin_access_register (status);
         """)
 
-        # Seed initial demo analyst user if not present
-        demo_user = conn.execute("SELECT id FROM users WHERE email = 'analyst@phishchips.internal'").fetchone()
-        if not demo_user:
-            now = datetime.now(timezone.utc).isoformat()
-            conn.execute("""
-            INSERT INTO users (id, email, name, avatar_url, provider, provider_id, role, created_at, last_login)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                "usr_demo_analyst",
-                "analyst@phishchips.internal",
-                "SecOps Analyst (Demo)",
-                "https://api.dicebear.com/7.x/bottts/svg?seed=PhishChipsAnalyst",
-                "demo",
-                "demo_12345",
-                "lead_analyst",
-                now,
-                now
-            ))
+        # Additive migration: check if password_hash / salt columns exist on older DBs
+        cursor = conn.execute("PRAGMA table_info(users);")
+        cols = {row[1] for row in cursor.fetchall()}
+        if "password_hash" not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN password_hash TEXT;")
+        if "salt" not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN salt TEXT;")
+
+        # Purge legacy demo analyst account and sessions
+        conn.execute("DELETE FROM users WHERE email = 'analyst@phishchips.internal';")
+        conn.execute("DELETE FROM sessions WHERE user_id = 'usr_demo_analyst';")
+
+        # Seed initial core infrastructure entries in Admin Access Register if empty
+        count = conn.execute("SELECT COUNT(*) FROM admin_access_register").fetchone()[0]
+        if count == 0:
+            now_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            now_ts = datetime.now(timezone.utc).isoformat()
+            seeds = [
+                (
+                    "ADM-SYS-001", "Vultr Cloud Compute Host (139.84.159.12)", "Infrastructure",
+                    "SecOps Super Admin", "Infrastructure Lead", "Engineering / SecOps",
+                    "Full Root SSH", 1, "Vultr Cloud Account", "4 vCPU / 8 GB RAM NVMe", 1,
+                    "2027-01-01", 1, 0, "Vault: Host SSH Private Key (~/.ssh/vultr)", 1,
+                    now_date, "2027-04-01", "Revoke SSH keys from /root/.ssh/authorized_keys",
+                    "Critical", "Provisioned", "Hardened Bangalore host running Caddy TLS, Docker sandbox, and Uvicorn control plane.",
+                    now_ts, now_ts
+                ),
+                (
+                    "ADM-SYS-002", "Google Cloud Platform (OAuth 2.0)", "Identity & Access",
+                    "Workspace Super Admin", "SecOps Lead", "SecOps",
+                    "Project Owner", 2, "GCP Enterprise Billing", "Google Cloud Console", 5,
+                    "2027-01-01", 1, 0, "Vault: GCP Client Secret & OAuth Credentials", 1,
+                    now_date, "2027-04-01", "Revoke GCP IAM project ownership & rotate OAuth Client Secret",
+                    "High", "Provisioned", "Google Identity Services client 20375038657-cljdjnp314hjdcanj7o4rk2a8csjjajd.apps.googleusercontent.com",
+                    now_ts, now_ts
+                ),
+                (
+                    "ADM-SYS-003", "Vultr Serverless Inference API Gateway", "AI & Inference",
+                    "AI Ops Admin", "SecOps Lead", "SecOps",
+                    "API Administrator", 1, "Vultr Cloud Account", "Serverless Pay-per-Token", 1,
+                    "2027-01-01", 1, 0, "Vault: VULTR_INFERENCE_API_KEY", 1,
+                    now_date, "2027-04-01", "Regenerate Vultr Inference API Token and restart systemd backend",
+                    "High", "Provisioned", "Powers Tier-2 forensic analysis via Qwen3.8-27B FP8 reasoning engine.",
+                    now_ts, now_ts
+                ),
+                (
+                    "ADM-SYS-004", "Phish&Chips Production SQLite WAL Database", "Data & Persistence",
+                    "Lead Database Admin", "SecOps Lead", "SecOps",
+                    "Database Owner", 1, "Local VM Storage", "Persistent NVMe WAL", 1,
+                    "2027-01-01", 1, 0, "File permissions: /root/phish-n-chips/data (0700)", 1,
+                    now_date, "2027-04-01", "Archive database backup, purge revoked user sessions",
+                    "Critical", "Provisioned", "ACID storage for analysts, scans, sessions, and access register.",
+                    now_ts, now_ts
+                )
+            ]
+            conn.executemany("""
+                INSERT INTO admin_access_register (
+                    admin_id, system_or_tool, category, main_admin, backup_admin, department,
+                    access_level, number_of_admin_users, billing_owner, plan, seats, renewal_date,
+                    company_owned_account, shared_login, password_manager_entry, two_factor_on,
+                    last_access_review, next_access_review, offboarding_checklist_item, risk_level,
+                    status, notes, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, seeds)
+
         conn.commit()
 
 # --- User Management ---
+
+def register_user(email: str, password: str, name: str) -> Dict[str, Any]:
+    """Registers a new user with email, strong password hash, and full name."""
+    email_clean = email.strip().lower()
+    name_clean = name.strip()
+
+    if not email_clean or "@" not in email_clean:
+        raise ValueError("A valid email address is required.")
+    if not password or len(password) < 8:
+        raise ValueError("Password must be at least 8 characters long.")
+    if not name_clean:
+        name_clean = email_clean.split("@")[0].replace(".", " ").title()
+
+    pw_hash, salt = hash_password(password)
+    now = datetime.now(timezone.utc).isoformat()
+    user_id = f"usr_{uuid.uuid4().hex[:12]}"
+
+    with get_db_connection() as conn:
+        existing = conn.execute("SELECT id FROM users WHERE email = ?", (email_clean,)).fetchone()
+        if existing:
+            raise ValueError("An account with this email address already exists. Please sign in.")
+
+        user_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        role = "admin" if user_count == 0 else "analyst"
+        avatar_url = f"https://api.dicebear.com/7.x/bottts/svg?seed={email_clean}"
+
+        conn.execute("""
+            INSERT INTO users (id, email, name, avatar_url, provider, provider_id, role, password_hash, salt, created_at, last_login)
+            VALUES (?, ?, ?, ?, 'email', NULL, ?, ?, ?, ?, ?)
+        """, (user_id, email_clean, name_clean, avatar_url, role, pw_hash, salt, now, now))
+        conn.commit()
+
+        row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        return safe_user(row)
+
+def authenticate_user(email: str, password: str) -> Optional[Dict[str, Any]]:
+    """Authenticates email + password credentials against stored PBKDF2 hash."""
+    email_clean = email.strip().lower()
+    now = datetime.now(timezone.utc).isoformat()
+
+    with get_db_connection() as conn:
+        row = conn.execute("SELECT * FROM users WHERE email = ?", (email_clean,)).fetchone()
+        if not row:
+            return None
+
+        # Check if user registered via Google
+        if not row["password_hash"] or not row["salt"]:
+            if row["provider"] == "google":
+                raise ValueError("This account is configured with Google Sign-In. Please sign in with Google.")
+            return None
+
+        if not verify_password(password, row["password_hash"], row["salt"]):
+            return None
+
+        conn.execute("UPDATE users SET last_login = ? WHERE id = ?", (now, row["id"]))
+        conn.commit()
+
+        updated = conn.execute("SELECT * FROM users WHERE id = ?", (row["id"],)).fetchone()
+        return safe_user(updated)
 
 def get_or_create_user(
     email: str,
@@ -104,10 +277,11 @@ def get_or_create_user(
     provider: str = "google",
     provider_id: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Retrieves an existing user by email or creates a new one."""
+    """Retrieves an existing OAuth user by email or creates a new one."""
+    email_clean = email.strip().lower()
     now = datetime.now(timezone.utc).isoformat()
     with get_db_connection() as conn:
-        row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+        row = conn.execute("SELECT * FROM users WHERE email = ?", (email_clean,)).fetchone()
         if row:
             conn.execute("""
                 UPDATE users SET last_login = ?, name = COALESCE(?, name), avatar_url = COALESCE(?, avatar_url)
@@ -115,22 +289,24 @@ def get_or_create_user(
             """, (now, name, avatar_url, row["id"]))
             conn.commit()
             updated = conn.execute("SELECT * FROM users WHERE id = ?", (row["id"],)).fetchone()
-            return dict(updated)
+            return safe_user(updated)
         else:
+            user_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+            role = "admin" if user_count == 0 else "analyst"
             user_id = f"usr_{uuid.uuid4().hex[:12]}"
             conn.execute("""
                 INSERT INTO users (id, email, name, avatar_url, provider, provider_id, role, created_at, last_login)
-                VALUES (?, ?, ?, ?, ?, ?, 'analyst', ?, ?)
-            """, (user_id, email, name, avatar_url, provider, provider_id, now, now))
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (user_id, email_clean, name, avatar_url, provider, provider_id, role, now, now))
             conn.commit()
             created = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-            return dict(created)
+            return safe_user(created)
 
 def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
-    """Retrieves user profile by ID."""
+    """Retrieves user profile by ID without password secrets."""
     with get_db_connection() as conn:
         row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-        return dict(row) if row else None
+        return safe_user(row)
 
 # --- Session Management ---
 
@@ -158,13 +334,87 @@ def get_user_by_session(token: str) -> Optional[Dict[str, Any]]:
             JOIN sessions s ON u.id = s.user_id
             WHERE s.token = ? AND s.expires_at > ?
         """, (token, now)).fetchone()
-        return dict(row) if row else None
+        return safe_user(row)
 
 def delete_session(token: str):
     """Logs out by invalidating session token."""
     with get_db_connection() as conn:
         conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
         conn.commit()
+
+# --- Admin Access Register (/admin-access-register) ---
+
+def get_admin_register() -> List[Dict[str, Any]]:
+    """Returns all privileged system admin entries."""
+    with get_db_connection() as conn:
+        rows = conn.execute("SELECT * FROM admin_access_register ORDER BY admin_id ASC").fetchall()
+        return [dict(r) for r in rows]
+
+def upsert_admin_register_entry(entry: Dict[str, Any]) -> Dict[str, Any]:
+    """Adds or updates a privileged admin entry in the register."""
+    now_ts = datetime.now(timezone.utc).isoformat()
+    admin_id = entry.get("admin_id") or f"ADM-{uuid.uuid4().hex[:6].upper()}"
+    with get_db_connection() as conn:
+        conn.execute("""
+            INSERT INTO admin_access_register (
+                admin_id, system_or_tool, category, main_admin, backup_admin, department,
+                access_level, number_of_admin_users, billing_owner, plan, seats, renewal_date,
+                company_owned_account, shared_login, password_manager_entry, two_factor_on,
+                last_access_review, next_access_review, offboarding_checklist_item, risk_level,
+                status, notes, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(admin_id) DO UPDATE SET
+                system_or_tool = excluded.system_or_tool,
+                category = excluded.category,
+                main_admin = excluded.main_admin,
+                backup_admin = excluded.backup_admin,
+                department = excluded.department,
+                access_level = excluded.access_level,
+                number_of_admin_users = excluded.number_of_admin_users,
+                billing_owner = excluded.billing_owner,
+                plan = excluded.plan,
+                seats = excluded.seats,
+                renewal_date = excluded.renewal_date,
+                company_owned_account = excluded.company_owned_account,
+                shared_login = excluded.shared_login,
+                password_manager_entry = excluded.password_manager_entry,
+                two_factor_on = excluded.two_factor_on,
+                last_access_review = excluded.last_access_review,
+                next_access_review = excluded.next_access_review,
+                offboarding_checklist_item = excluded.offboarding_checklist_item,
+                risk_level = excluded.risk_level,
+                status = excluded.status,
+                notes = excluded.notes,
+                updated_at = excluded.updated_at
+        """, (
+            admin_id,
+            entry.get("system_or_tool", "System"),
+            entry.get("category", "General"),
+            entry.get("main_admin", "Admin"),
+            entry.get("backup_admin"),
+            entry.get("department", "SecOps"),
+            entry.get("access_level", "Full"),
+            entry.get("number_of_admin_users", 1),
+            entry.get("billing_owner"),
+            entry.get("plan"),
+            entry.get("seats", 1),
+            entry.get("renewal_date"),
+            1 if entry.get("company_owned_account", True) else 0,
+            1 if entry.get("shared_login", False) else 0,
+            entry.get("password_manager_entry"),
+            1 if entry.get("two_factor_on", True) else 0,
+            entry.get("last_access_review"),
+            entry.get("next_access_review"),
+            entry.get("offboarding_checklist_item"),
+            entry.get("risk_level", "Low"),
+            entry.get("status", "Provisioned"),
+            entry.get("notes"),
+            now_ts,
+            now_ts
+        ))
+        conn.commit()
+        row = conn.execute("SELECT * FROM admin_access_register WHERE admin_id = ?", (admin_id,)).fetchone()
+        return dict(row)
 
 # --- Scan History Management ---
 
@@ -267,4 +517,3 @@ def get_analytics_summary() -> Dict[str, Any]:
             "suspicious_flagged": suspicious_count,
             "total_users": max(total_users, 1)
         }
-

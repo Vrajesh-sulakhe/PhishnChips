@@ -35,12 +35,6 @@ function readViewerSession(): Viewer | null {
   } catch {
     // A missing or unavailable browser session must not break navigation.
   }
-  // Auto-authenticate with demo analyst if direct console/dashboard path was hit
-  const path = window.location.pathname.replace(/^\/+/, "").split("/")[0];
-  const hash = window.location.hash.slice(1).split("?")[0];
-  if (path === "dashboard" || path === "console" || path === "product" || hash === "dashboard") {
-    return { name: "SecOps Lead Analyst", email: "analyst@phishchips.internal" };
-  }
   return null;
 }
 
@@ -62,13 +56,16 @@ export default function App() {
     fetch("/api/auth/me")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data && data.authenticated && data.user) {
+        if (data && data.authenticated && data.user && data.user.email) {
           const u: Viewer = {
-            name: data.user.name || "Lead Analyst",
-            email: data.user.email || "analyst@phishchips.internal",
+            name: data.user.name || "Analyst",
+            email: data.user.email,
           };
           writeViewerSession(u);
           setViewer(u);
+        } else {
+          writeViewerSession(null);
+          setViewer(null);
         }
       })
       .catch(() => {});

@@ -83,9 +83,38 @@ class ApprovalRequest(BaseModel):
 class GoogleAuthRequest(BaseModel):
     credential: str
 
-class DemoAuthRequest(BaseModel):
-    name: Optional[str] = "SecOps Lead Analyst"
-    email: Optional[str] = "analyst@phishchips.internal"
+class EmailRegisterRequest(BaseModel):
+    email: str
+    password: str
+    name: Optional[str] = ""
+
+class EmailLoginRequest(BaseModel):
+    email: str
+    password: str
+
+class AdminRegisterEntryRequest(BaseModel):
+    admin_id: Optional[str] = None
+    system_or_tool: str
+    category: Optional[str] = "Security"
+    main_admin: str
+    backup_admin: Optional[str] = None
+    department: Optional[str] = "SecOps"
+    access_level: Optional[str] = "Full"
+    number_of_admin_users: Optional[int] = 1
+    billing_owner: Optional[str] = None
+    plan: Optional[str] = None
+    seats: Optional[int] = 1
+    renewal_date: Optional[str] = None
+    company_owned_account: Optional[bool] = True
+    shared_login: Optional[bool] = False
+    password_manager_entry: Optional[str] = None
+    two_factor_on: Optional[bool] = True
+    last_access_review: Optional[str] = None
+    next_access_review: Optional[str] = None
+    offboarding_checklist_item: Optional[str] = None
+    risk_level: Optional[str] = "Low"
+    status: Optional[str] = "Provisioned"
+    notes: Optional[str] = None
 
 @app.api_route("/", methods=["GET", "HEAD"])
 def serve_root():
@@ -220,22 +249,19 @@ async def google_login(payload: GoogleAuthRequest, response: Response):
         "user": user
     }
 
-@app.post("/api/auth/demo")
-async def demo_login(response: Response, payload: Optional[DemoAuthRequest] = None):
-    """Instant 1-click login for hackathon judges & testers without Google credentials."""
-    name = (payload and payload.name) or "SecOps Lead Analyst"
-    email = (payload and payload.email) or "analyst@phishchips.internal"
-
-    user = db.get_or_create_user(
-        email=email,
-        name=name,
-        avatar_url="https://api.dicebear.com/7.x/bottts/svg?seed=PhishChipsLead",
-        provider="demo",
-        provider_id="demo_analyst_01"
-    )
+@app.post("/api/auth/register")
+async def register_email(payload: EmailRegisterRequest, response: Response):
+    """Registers a new user account with email and password in the Vultr SQLite database."""
+    try:
+        user = db.register_user(
+            email=payload.email,
+            password=payload.password,
+            name=payload.name or ""
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
     session_token = db.create_session(user["id"])
-
     response.set_cookie(
         key="phishchips_session",
         value=session_token,
@@ -244,13 +270,73 @@ async def demo_login(response: Response, payload: Optional[DemoAuthRequest] = No
         secure=False,
         max_age=14 * 86400
     )
-
     return {
         "status": "ok",
         "authenticated": True,
         "token": session_token,
         "user": user
     }
+
+@app.post("/api/auth/login")
+async def login_email(payload: EmailLoginRequest, response: Response):
+    """Authenticates email and password credentials against the Vultr SQLite database."""
+    try:
+        user = db.authenticate_user(email=payload.email, password=payload.password)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password. Please check your credentials."
+        )
+
+    session_token = db.create_session(user["id"])
+    response.set_cookie(
+        key="phishchips_session",
+        value=session_token,
+        httponly=True,
+        samesite="lax",
+        secure=False,
+        max_age=14 * 86400
+    )
+    return {
+        "status": "ok",
+        "authenticated": True,
+        "token": session_token,
+        "user": user
+    }
+
+@app.post("/api/auth/demo")
+async def demo_login():
+    """Demo login is deprecated. Users must sign in via Google OAuth or verified Email."""
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="Demo login has been deprecated. Please sign in with Google or Email."
+    )
+
+# --- Admin Access Register Endpoints (/admin-access-register) ---
+
+@app.get("/api/admin/register")
+async def get_admin_access_register(request: Request):
+    """Returns the Admin Access Register records showing system privileged access & owners."""
+    user = auth.get_current_user_optional(request)
+    records = db.get_admin_register()
+    return {
+        "status": "ok",
+        "total_systems": len(records),
+        "user_role": user["role"] if user else "anonymous",
+        "register": records
+    }
+
+@app.post("/api/admin/register")
+async def update_admin_access_register(payload: AdminRegisterEntryRequest, request: Request):
+    """Adds or updates a privileged admin entry in the register."""
+    user = auth.get_current_user_required(request)
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required to modify the access register.")
+    entry = db.upsert_admin_register_entry(payload.model_dump())
+    return {"status": "ok", "entry": entry}
 
 @app.get("/api/auth/me")
 async def get_current_user(request: Request):

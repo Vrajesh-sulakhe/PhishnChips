@@ -88,7 +88,7 @@ def get_current_user_required(request: Request) -> Dict[str, Any]:
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required. Please sign in with Google or continue as Demo Analyst."
+            detail="Authentication required. Please sign in with Google or Email."
         )
     return user
 
