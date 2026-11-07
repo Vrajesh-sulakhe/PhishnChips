@@ -153,6 +153,7 @@ export type Outcome = "benign" | "suspicious" | "malicious" | "indeterminate";
 
 export type ScanRecord = {
   id: string;
+  raw_job_id?: string;
   url: string;
   time: string;
   malicious: boolean;
@@ -165,6 +166,17 @@ export type ScanRecord = {
   reasons?: string[];
   asks_for?: string[];
   threat_source?: string;
+  c2_intelligence?: {
+    has_c2_exfiltration: boolean;
+    drop_destinations?: Array<{
+      channel_type: string;
+      target_endpoint: string;
+      identifier: string;
+      risk_rating: string;
+      actionable_takedown_recipient?: string;
+    }>;
+    attribution_summary?: string;
+  };
 };
 
 /** Single source of truth for verdict interpretation. Only an explicit malicious verdict is "malicious":
@@ -263,6 +275,17 @@ export default function Dashboard({
   const [liveMessage, setLiveMessage] = useState("");
   const [approvalJobId, setApprovalJobId] = useState<string | null>(null);
   const [systemHealth, setSystemHealth] = useState<any>(null);
+  const [takedownModal, setTakedownModal] = useState<{
+    isOpen: boolean;
+    loading: boolean;
+    data: any | null;
+    copied: boolean;
+  }>({
+    isOpen: false,
+    loading: false,
+    data: null,
+    copied: false,
+  });
 
   const inputRef = useRef<HTMLInputElement>(null);
   const recordsRef = useRef<HTMLElement>(null);
@@ -294,6 +317,7 @@ export default function Dashboard({
             : "Recent";
           return {
             id: s.job_id ? `DET-${s.job_id.slice(0, 6).toUpperCase()}` : "DET-0001",
+            raw_job_id: s.job_id,
             url: s.target_url || "",
             time: timeStr,
             malicious: isMalicious,
@@ -306,6 +330,7 @@ export default function Dashboard({
             reasons: s.reasons || [],
             asks_for: s.asks_for || [],
             threat_source: s.threat_source || "",
+            c2_intelligence: s.c2_intelligence,
           };
         });
         setRecords(mapped);
@@ -365,6 +390,7 @@ export default function Dashboard({
 
     const record: ScanRecord = {
       id: `DET-${jobId.slice(0, 6).toUpperCase()}`,
+      raw_job_id: jobId,
       url: targetUrl,
       time: new Date().toLocaleTimeString("en-GB"),
       malicious: isMalicious,
@@ -377,6 +403,7 @@ export default function Dashboard({
       reasons: result.reasons || raw.reasons || [],
       asks_for: result.asks_for || (raw.fields?.password ? ["Password", "OTP / Security PIN"] : []),
       threat_source: result.threat_source || "Vultr Serverless Inference",
+      c2_intelligence: data.c2_intelligence || raw.c2_intelligence,
     };
 
     setRecords((prev) => [record, ...prev.filter((r) => r.id !== record.id)]);
@@ -389,6 +416,40 @@ export default function Dashboard({
     loadRecentScans();
     loadHealth();
   }
+
+  const openTakedownPackage = async (record: ScanRecord) => {
+    const targetJobId = record.raw_job_id || record.id.replace("DET-", "").toLowerCase();
+    setTakedownModal({
+      isOpen: true,
+      loading: true,
+      data: null,
+      copied: false,
+    });
+    try {
+      const res = await fetch(`/api/scan/${targetJobId}/takedown`);
+      if (res.ok) {
+        const d = await res.json();
+        setTakedownModal({
+          isOpen: true,
+          loading: false,
+          data: d,
+          copied: false,
+        });
+      } else {
+        setNotice("Failed to generate takedown package.");
+        setTakedownModal((prev) => ({ ...prev, isOpen: false, loading: false }));
+      }
+    } catch {
+      setNotice("Error contacting takedown generator.");
+      setTakedownModal((prev) => ({ ...prev, isOpen: false, loading: false }));
+    }
+  };
+
+  const downloadEvidenceLocker = (record: ScanRecord) => {
+    const targetJobId = record.raw_job_id || record.id.replace("DET-", "").toLowerCase();
+    window.location.href = `/api/scan/${targetJobId}/evidence.tar.gz`;
+    setNotice(`Downloading Signed Evidence Locker for ${record.id}...`);
+  };
 
   async function handleApproval(approve: boolean) {
     if (!approvalJobId) return;
@@ -936,7 +997,9 @@ export default function Dashboard({
                           {threatLabel(record)}
                         </span>
                         <span className="cell-subtitle">
-                          {record.malicious ? record.brand : "Caged detonation"}
+                          {record.c2_intelligence?.has_c2_exfiltration
+                            ? `🎯 C2: ${record.c2_intelligence.drop_destinations?.[0]?.channel_type || "Drop"} vector`
+                            : record.malicious ? record.brand : "Caged detonation"}
                         </span>
                       </td>
                       <td>
@@ -1200,6 +1263,57 @@ export default function Dashboard({
                     </div>
                   )}
 
+                  {selected.c2_intelligence?.has_c2_exfiltration && (
+                    <div
+                      style={{
+                        margin: "12px 0",
+                        padding: "12px 14px",
+                        background: "rgba(239, 68, 68, 0.12)",
+                        border: "1px solid rgba(239, 68, 68, 0.4)",
+                        borderRadius: "6px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          color: "#f87171",
+                          fontWeight: 700,
+                          fontSize: "12px",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                        }}
+                      >
+                        <Icon name="bolt" size={16} />
+                        <span>Attacker C2 Exfiltration Vector Discovered</span>
+                      </div>
+                      <p style={{ margin: "6px 0 8px", fontSize: "12px", color: "var(--text)" }}>
+                        {selected.c2_intelligence.attribution_summary || "Covert credential drop channel intercepted."}
+                      </p>
+                      {selected.c2_intelligence.drop_destinations?.map((d: any, i: number) => (
+                        <div
+                          key={i}
+                          style={{
+                            fontSize: "11px",
+                            fontFamily: "var(--mono)",
+                            background: "rgba(0,0,0,0.5)",
+                            padding: "6px 10px",
+                            borderRadius: "4px",
+                            marginBottom: "4px",
+                            border: "1px solid rgba(255,255,255,0.08)",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <span>DROP: {d.channel_type.toUpperCase()} ({d.identifier})</span>
+                          <span style={{ color: "#ef4444", fontWeight: 700 }}>{d.risk_rating} RISK</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <dl className="result-details">
                     <div>
                       <dt>Verdict</dt>
@@ -1236,6 +1350,44 @@ export default function Dashboard({
                       </div>
                     )}
                   </dl>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", margin: "16px 0 10px" }}>
+                    <button
+                      className="primary-button"
+                      style={{
+                        background: selected.malicious ? "#b91c1c" : "#27272a",
+                        borderColor: selected.malicious ? "#ef4444" : "#3f3f46",
+                        fontSize: "12px",
+                        padding: "9px 10px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                      }}
+                      onClick={() => openTakedownPackage(selected)}
+                    >
+                      <Icon name="alert" size={15} />
+                      1-Click Abuse Takedown
+                    </button>
+                    <button
+                      className="primary-button"
+                      style={{
+                        background: "#18181b",
+                        borderColor: "#3f3f46",
+                        fontSize: "12px",
+                        padding: "9px 10px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                      }}
+                      onClick={() => downloadEvidenceLocker(selected)}
+                    >
+                      <Icon name="download" size={15} />
+                      Evidence Locker (.tar.gz)
+                    </button>
+                  </div>
+
                   <button className="primary-button modal-done" onClick={() => setSelected(null)}>
                     Back to workspace
                     <Icon name="arrow" size={17} />
@@ -1243,6 +1395,155 @@ export default function Dashboard({
                 </>
               )
             )}
+          </section>
+        </div>
+      )}
+
+      {takedownModal.isOpen && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setTakedownModal((prev) => ({ ...prev, isOpen: false }))}
+        >
+          <section
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Automated Abuse Takedown & STIX 2.1 Package"
+            onClick={(event) => event.stopPropagation()}
+            style={{ maxWidth: "680px", maxHeight: "90vh", overflowY: "auto" }}
+          >
+            <button
+              autoFocus
+              className="modal-close"
+              aria-label="Close dialog"
+              onClick={() => setTakedownModal((prev) => ({ ...prev, isOpen: false }))}
+            >
+              <Icon name="close" />
+            </button>
+            <span className="modal-symbol symbol-danger">
+              <Icon name="alert" size={28} />
+            </span>
+            <div className="eyebrow">AUTOMATED INCIDENT RESPONSE</div>
+            <h2>1-Click Takedown & Threat Intelligence</h2>
+            <p className="modal-intro">
+              RFC 2822 formal legal abuse notice pre-addressed to hosting providers and registrars, plus standard STIX 2.1 IoC feed.
+            </p>
+
+            {takedownModal.loading ? (
+              <div style={{ padding: "40px", textAlign: "center", color: "#9f9995" }}>
+                <Icon name="refresh" size={24} className="spin" />
+                <p style={{ marginTop: "12px" }}>Synthesizing abuse contacts and STIX 2.1 bundle...</p>
+              </div>
+            ) : takedownModal.data ? (
+              <>
+                <div style={{ margin: "16px 0 12px" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "#9f9995", marginBottom: "6px", textTransform: "uppercase" }}>
+                    DESIGNATED ABUSE CONTACTS
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                    {takedownModal.data.abuse_contacts?.map((contact: string, idx: number) => (
+                      <span
+                        key={idx}
+                        style={{
+                          background: "#27272a",
+                          color: "#38bdf8",
+                          fontFamily: "var(--mono)",
+                          fontSize: "12px",
+                          padding: "4px 8px",
+                          borderRadius: "4px",
+                          border: "1px solid #3f3f46",
+                        }}
+                      >
+                        {contact}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ margin: "14px 0" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#9f9995", textTransform: "uppercase" }}>
+                      FORMAL RFC 2822 ABUSE NOTICE
+                    </span>
+                    <button
+                      className="primary-button"
+                      style={{ fontSize: "11px", padding: "4px 10px", height: "auto" }}
+                      onClick={() => {
+                        navigator.clipboard.writeText(takedownModal.data.abuse_letter_text || takedownModal.data.abuse_letter || "");
+                        setTakedownModal((prev) => ({ ...prev, copied: true }));
+                        setTimeout(() => setTakedownModal((prev) => ({ ...prev, copied: false })), 2000);
+                      }}
+                    >
+                      {takedownModal.copied ? "✓ Copied Notice!" : "Copy Legal Notice"}
+                    </button>
+                  </div>
+                  <textarea
+                    readOnly
+                    rows={8}
+                    value={takedownModal.data.abuse_letter_text || takedownModal.data.abuse_letter || ""}
+                    style={{
+                      width: "100%",
+                      fontFamily: "var(--mono)",
+                      fontSize: "11px",
+                      background: "#09090b",
+                      color: "#e4e4e7",
+                      border: "1px solid #27272a",
+                      borderRadius: "6px",
+                      padding: "10px",
+                      resize: "vertical",
+                    }}
+                  />
+                </div>
+
+                <div style={{ margin: "14px 0" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#9f9995", textTransform: "uppercase" }}>
+                      STIX 2.1 THREAT INTEL BUNDLE (JSON)
+                    </span>
+                    <button
+                      className="primary-button"
+                      style={{ fontSize: "11px", padding: "4px 10px", height: "auto" }}
+                      onClick={() => {
+                        const blob = new Blob([JSON.stringify(takedownModal.data.stix_bundle, null, 2)], { type: "application/json" });
+                        const dlUrl = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = dlUrl;
+                        a.download = `STIX-2.1-${takedownModal.data.domain || "threat"}.json`;
+                        a.click();
+                        URL.revokeObjectURL(dlUrl);
+                      }}
+                    >
+                      Export STIX 2.1
+                    </button>
+                  </div>
+                  <pre
+                    style={{
+                      fontFamily: "var(--mono)",
+                      fontSize: "10px",
+                      background: "#09090b",
+                      color: "#a1a1aa",
+                      border: "1px solid #27272a",
+                      borderRadius: "6px",
+                      padding: "10px",
+                      maxHeight: "140px",
+                      overflowY: "auto",
+                      whiteSpace: "pre-wrap",
+                      margin: 0,
+                    }}
+                  >
+                    {JSON.stringify(takedownModal.data.stix_bundle, null, 2)}
+                  </pre>
+                </div>
+
+                <button
+                  className="primary-button modal-done"
+                  onClick={() => setTakedownModal((prev) => ({ ...prev, isOpen: false }))}
+                  style={{ marginTop: "16px" }}
+                >
+                  Done
+                </button>
+              </>
+            ) : null}
           </section>
         </div>
       )}

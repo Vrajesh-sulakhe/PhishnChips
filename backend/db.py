@@ -150,7 +150,7 @@ def init_db():
         if "salt" not in cols:
             conn.execute("ALTER TABLE users ADD COLUMN salt TEXT;")
 
-        # Additive migration: ensure scans table has verdict_class, threat_type, evidence_chain_json
+        # Additive migration: ensure scans table has verdict_class, threat_type, evidence_chain_json, c2_intelligence_json
         scan_cursor = conn.execute("PRAGMA table_info(scans);")
         scan_cols = {row[1] for row in scan_cursor.fetchall()}
         if "threat_type" not in scan_cols:
@@ -159,6 +159,8 @@ def init_db():
             conn.execute("ALTER TABLE scans ADD COLUMN verdict_class TEXT;")
         if "evidence_chain_json" not in scan_cols:
             conn.execute("ALTER TABLE scans ADD COLUMN evidence_chain_json TEXT;")
+        if "c2_intelligence_json" not in scan_cols:
+            conn.execute("ALTER TABLE scans ADD COLUMN c2_intelligence_json TEXT;")
 
         # Self-healing migration: heal any legacy false-positive records created before reputation gate was deployed
         conn.execute("""
@@ -457,6 +459,7 @@ def save_scan(
     threat_type: Optional[str] = None,
     verdict_class: Optional[str] = None,
     evidence_chain: Optional[List[str]] = None,
+    c2_intelligence: Optional[Dict[str, Any]] = None,
 ):
     """Persists or updates scan telemetry and verdict in database."""
     now = datetime.now(timezone.utc).isoformat()
@@ -465,8 +468,9 @@ def save_scan(
             INSERT INTO scans (
                 job_id, user_id, target_url, status, verdict, confidence,
                 threat_source, screenshots_json, reasons_json, asks_for_json,
-                pretending_to_be, threat_type, verdict_class, evidence_chain_json, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                pretending_to_be, threat_type, verdict_class, evidence_chain_json,
+                c2_intelligence_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(job_id) DO UPDATE SET
                 user_id = COALESCE(excluded.user_id, scans.user_id),
                 status = excluded.status,
@@ -479,7 +483,8 @@ def save_scan(
                 pretending_to_be = excluded.pretending_to_be,
                 threat_type = excluded.threat_type,
                 verdict_class = excluded.verdict_class,
-                evidence_chain_json = excluded.evidence_chain_json
+                evidence_chain_json = excluded.evidence_chain_json,
+                c2_intelligence_json = COALESCE(excluded.c2_intelligence_json, scans.c2_intelligence_json)
         """, (
             job_id,
             user_id,
@@ -495,6 +500,7 @@ def save_scan(
             threat_type,
             verdict_class,
             json.dumps(evidence_chain or []),
+            json.dumps(c2_intelligence or {}) if c2_intelligence is not None else None,
             now
         ))
         conn.commit()
@@ -516,6 +522,7 @@ def get_recent_scans(limit: int = 15) -> List[Dict[str, Any]]:
             d["reasons"] = json.loads(d.get("reasons_json") or "[]")
             d["asks_for"] = json.loads(d.get("asks_for_json") or "[]")
             d["evidence_chain"] = json.loads(d.get("evidence_chain_json") or "[]")
+            d["c2_intelligence"] = json.loads(d.get("c2_intelligence_json") or "{}")
             if not d.get("verdict_class"):
                 v = (d.get("verdict") or "").upper()
                 d["verdict_class"] = "malicious" if v in ("SCAM", "MALICIOUS") else ("benign" if v in ("SAFE", "BENIGN") else "suspicious")
@@ -540,6 +547,7 @@ def get_user_scans(user_id: str, limit: int = 25) -> List[Dict[str, Any]]:
             d["reasons"] = json.loads(d.get("reasons_json") or "[]")
             d["asks_for"] = json.loads(d.get("asks_for_json") or "[]")
             d["evidence_chain"] = json.loads(d.get("evidence_chain_json") or "[]")
+            d["c2_intelligence"] = json.loads(d.get("c2_intelligence_json") or "{}")
             if not d.get("verdict_class"):
                 v = (d.get("verdict") or "").upper()
                 d["verdict_class"] = "malicious" if v in ("SCAM", "MALICIOUS") else ("benign" if v in ("SAFE", "BENIGN") else "suspicious")
@@ -547,13 +555,25 @@ def get_user_scans(user_id: str, limit: int = 25) -> List[Dict[str, Any]]:
                 d["threat_type"] = "none" if d["verdict_class"] == "benign" else "credential_harvest"
             results.append(d)
         return results
-        for r in rows:
-            d = dict(r)
-            d["screenshots"] = json.loads(d.get("screenshots_json") or "[]")
-            d["reasons"] = json.loads(d.get("reasons_json") or "[]")
-            d["asks_for"] = json.loads(d.get("asks_for_json") or "[]")
-            results.append(d)
-        return results
+
+def get_scan_by_id(job_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieves an individual scan record by its job_id."""
+    with get_db_connection() as conn:
+        row = conn.execute("SELECT * FROM scans WHERE job_id = ?", (job_id,)).fetchone()
+        if not row:
+            return None
+        d = dict(row)
+        d["screenshots"] = json.loads(d.get("screenshots_json") or "[]")
+        d["reasons"] = json.loads(d.get("reasons_json") or "[]")
+        d["asks_for"] = json.loads(d.get("asks_for_json") or "[]")
+        d["evidence_chain"] = json.loads(d.get("evidence_chain_json") or "[]")
+        d["c2_intelligence"] = json.loads(d.get("c2_intelligence_json") or "{}")
+        if not d.get("verdict_class"):
+            v = (d.get("verdict") or "").upper()
+            d["verdict_class"] = "malicious" if v in ("SCAM", "MALICIOUS") else ("benign" if v in ("SAFE", "BENIGN") else "suspicious")
+        if not d.get("threat_type"):
+            d["threat_type"] = "none" if d["verdict_class"] == "benign" else "credential_harvest"
+        return d
 
 def get_analytics_summary() -> Dict[str, Any]:
     """Computes high-level platform stats for landing and dashboard cards."""

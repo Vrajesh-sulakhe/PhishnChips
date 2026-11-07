@@ -17,6 +17,8 @@ from analyzer import analyze_threat, TOTAL_BUDGET_SECONDS
 from schemas import LEGACY_VERDICT
 import metrics
 import db
+import c2_hunter
+import forensics
 
 BASE_DIR = Path("/root/phish-n-chips")
 if not BASE_DIR.exists():
@@ -295,6 +297,26 @@ def _finish_job(job_id: str, url: str, job: Dict[str, Any], started: float) -> N
         tier=verdict_data.get("tier"), engine=verdict_data.get("engine"), degraded_reason=verdict_data.get("degraded_reason"),
         analysis_complete=verdict_data.get("analysis_complete"), duration_s=round(elapsed, 2),
     )
+
+    # Component 2 & 4: Extract C2 threat intelligence & generate cryptographic forensic locker
+    job_dir = EVIDENCE_DIR / job_id
+    try:
+        c2_intel = c2_hunter.extract_c2_intelligence(job.get("raw_result") or {})
+        job["c2_intelligence"] = c2_intel
+        if c2_intel.get("has_c2_exfiltration"):
+            log_event(job_id, f"🎯 C2 Exfiltration Vector Discovered: {c2_intel.get('attribution_summary')}", stage="C2_INTEL")
+    except Exception as c2_err:
+        print(f"Error computing C2 intelligence: {c2_err}")
+        c2_intel = {"has_c2_exfiltration": False, "drop_destinations": [], "attribution_summary": "None"}
+        job["c2_intelligence"] = c2_intel
+
+    try:
+        forensic_manifest = forensics.generate_forensic_manifest(job_id, job_dir)
+        job["forensic_manifest"] = forensic_manifest
+        log_event(job_id, f"🔒 Signed forensic locker generated ({len(forensic_manifest.get('artifacts', []))} artifacts, HMAC verified)", stage="FORENSIC_LOCKER")
+    except Exception as f_err:
+        print(f"Error generating forensic manifest: {f_err}")
+
     log_event(job_id, "🍟 Phish fried. Sandbox destroyed.", stage="DONE")
     job["status"] = "done"
     try:
@@ -313,6 +335,7 @@ def _finish_job(job_id: str, url: str, job: Dict[str, Any], started: float) -> N
             threat_type=verdict_data.get("threat_type"),
             verdict_class=verdict_data.get("verdict_class"),
             evidence_chain=verdict_data.get("evidence_chain", []),
+            c2_intelligence=job.get("c2_intelligence"),
         )
     except Exception as dbe:
         print(f"Error persisting scan to DB: {dbe}")

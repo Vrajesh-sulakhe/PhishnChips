@@ -65,3 +65,4 @@
   Run: `bash deploy.sh`
 - [ ] **Step 2: Verify live endpoints on Vultr VM**
   Run remote test creating two sessions and proving `/api/scans/recent` returns strictly isolated results.
+

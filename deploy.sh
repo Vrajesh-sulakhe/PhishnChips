@@ -28,6 +28,7 @@ rsync -avz --delete \
   --exclude '.git' \
   --exclude '.DS_Store' \
   --exclude '__pycache__' \
+  --exclude 'rea' \
   -e "ssh -i $KEY_PATH" \
   ./ root@${SERVER_IP}:/root/phish-n-chips/
 

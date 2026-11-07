@@ -8,6 +8,7 @@ import os
 import uuid
 import re
 import json
+import io
 import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -29,6 +30,8 @@ import metrics
 import reputation
 import db
 import auth
+import forensics
+import takedown
 
 BASE_DIR = Path("/root/phish-n-chips")
 if not BASE_DIR.exists():
@@ -495,7 +498,32 @@ async def stream_scan_events(job_id: str):
 async def get_scan_status(job_id: str):
     job = scanner.get_job(job_id)
     if not job:
-        raise HTTPException(status_code=404, detail=f"Scan job '{job_id}' not found.")
+        # Check SQLite DB fallback for completed past investigations
+        db_scan = db.get_scan_by_id(job_id)
+        if not db_scan:
+            raise HTTPException(status_code=404, detail=f"Scan job '{job_id}' not found.")
+        return {
+            "job_id": job_id,
+            "target_url": db_scan.get("target_url"),
+            "status": db_scan.get("status"),
+            "events": [],
+            "screenshots": db_scan.get("screenshots", []),
+            "result": {
+                "verdict": db_scan.get("verdict"),
+                "confidence": db_scan.get("confidence"),
+                "threat_source": db_scan.get("threat_source"),
+                "reasons": db_scan.get("reasons", []),
+                "asks_for": db_scan.get("asks_for", []),
+                "pretending_to_be": db_scan.get("pretending_to_be"),
+                "threat_type": db_scan.get("threat_type"),
+                "verdict_class": db_scan.get("verdict_class"),
+                "evidence_chain": db_scan.get("evidence_chain", [])
+            },
+            "c2_intelligence": db_scan.get("c2_intelligence") or {"has_c2_exfiltration": False, "drop_destinations": []},
+            "forensic_manifest": None,
+            "raw_telemetry": None,
+            "error": None
+        }
 
     events = get_events(job_id)
 
@@ -506,9 +534,75 @@ async def get_scan_status(job_id: str):
         "events": events,
         "screenshots": job.get("screenshots", []),
         "result": job.get("verdict"),
+        "c2_intelligence": job.get("c2_intelligence") or {"has_c2_exfiltration": False, "drop_destinations": []},
+        "forensic_manifest": job.get("forensic_manifest"),
         "raw_telemetry": job.get("raw_result"),
         "error": job.get("error")
     }
+
+@app.get("/api/scan/{job_id}/evidence.tar.gz")
+async def download_evidence_locker(job_id: str):
+    """Streams a cryptographically signed HMAC-SHA256 forensic archive for SIEM and law enforcement."""
+    job_dir = EVIDENCE_DIR / job_id
+    if not job_dir.exists() or not job_dir.is_dir():
+        raise HTTPException(status_code=404, detail=f"No forensic evidence found on disk for investigation '{job_id}'.")
+
+    try:
+        tar_bytes = forensics.build_forensic_tarball(job_id, job_dir)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate evidence tarball: {str(e)}")
+
+    filename = f"DET-{job_id}-FORENSIC-LOCKER.tar.gz"
+    return StreamingResponse(
+        io.BytesIO(tar_bytes),
+        media_type="application/gzip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Forensic-Locker-Job": job_id
+        }
+    )
+
+@app.get("/api/scan/{job_id}/takedown")
+async def generate_takedown_endpoint(job_id: str):
+    """Generates an RFC-compliant legal abuse notification letter and STIX 2.1 Threat Intel bundle."""
+    job = scanner.get_job(job_id)
+    target_url = None
+    verdict_info = None
+    c2_intel = None
+
+    if job:
+        target_url = job.get("target_url")
+        verdict_info = job.get("verdict")
+        c2_intel = job.get("c2_intelligence")
+    else:
+        db_scan = db.get_scan_by_id(job_id)
+        if db_scan:
+            target_url = db_scan.get("target_url")
+            verdict_info = {
+                "verdict": db_scan.get("verdict"),
+                "confidence": db_scan.get("confidence"),
+                "threat_source": db_scan.get("threat_source"),
+                "pretending_to_be": db_scan.get("pretending_to_be"),
+                "reasons": db_scan.get("reasons", []),
+                "evidence_chain": db_scan.get("evidence_chain", []),
+                "verdict_class": db_scan.get("verdict_class")
+            }
+            c2_intel = db_scan.get("c2_intelligence")
+
+    if not target_url or not verdict_info:
+        raise HTTPException(status_code=404, detail=f"Investigation record for '{job_id}' not found.")
+
+    scan_data = {
+        "job_id": job_id,
+        "target_url": target_url,
+        "pretending_to_be": verdict_info.get("pretending_to_be") if isinstance(verdict_info, dict) else None,
+        "reasons": verdict_info.get("reasons", []) if isinstance(verdict_info, dict) else [],
+        "confidence": verdict_info.get("confidence", 0.95) if isinstance(verdict_info, dict) else 0.95,
+        "c2_intelligence": c2_intel or {}
+    }
+
+    takedown_pkg = takedown.generate_takedown_package(scan_data)
+    return takedown_pkg
 
 @app.post("/api/scan/{job_id}/approve")
 async def approve_scan_action(job_id: str, body: ApprovalRequest):

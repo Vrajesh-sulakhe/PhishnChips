@@ -107,6 +107,8 @@ result = {
     "tls_error": False,
     "submit_pass_executed": False,
     "post_submit_url": None,
+    "exfiltration_channels": [],
+    "stealth_applied": True,
     "error": None
 }
 
@@ -171,7 +173,7 @@ with sync_playwright() as p:
         # Auto-dismiss dialogs / alerts
         page.on("dialog", lambda dialog: dialog.dismiss())
 
-        # Collect external domains from all outgoing network requests
+        # Collect external domains and detect exfiltration channels
         def on_request(req):
             d = get_domain(req.url)
             if d and base_domain and d != base_domain:
@@ -179,6 +181,26 @@ with sync_playwright() as p:
             # Credential exfiltration candidates: state-changing requests leaving the site.
             if req.method in ("POST", "PUT") and d and apex_of(d) != apex_of(base_domain) and len(result["post_requests"]) < 20:
                 result["post_requests"].append({"url": req.url[:300], "method": req.method, "resource_type": req.resource_type})
+
+            url_lower = req.url.lower()
+            if "api.telegram.org/bot" in url_lower and len(result["exfiltration_channels"]) < 10:
+                result["exfiltration_channels"].append({
+                    "channel": "telegram_bot",
+                    "destination": req.url[:300],
+                    "method": req.method
+                })
+            elif ("discord.com/api/webhooks" in url_lower or "discordapp.com/api/webhooks" in url_lower) and len(result["exfiltration_channels"]) < 10:
+                result["exfiltration_channels"].append({
+                    "channel": "discord_webhook",
+                    "destination": req.url[:300],
+                    "method": req.method
+                })
+            elif req.method in ("POST", "PUT") and any(k in url_lower for k in ("gate.php", "drop.php", "post.php", "steal", "receiver")) and len(result["exfiltration_channels"]) < 10:
+                result["exfiltration_channels"].append({
+                    "channel": "c2_drop_endpoint",
+                    "destination": req.url[:300],
+                    "method": req.method
+                })
 
         page.on("request", on_request)
 
@@ -239,7 +261,14 @@ with sync_playwright() as p:
         except Exception:
             pass
 
-        # Extract DOM data
+        # Extract DOM data and save raw DOM snapshot for forensics
+        try:
+            dom_path = os.path.join(OUT_DIR, "dom_snapshot.html")
+            with open(dom_path, "w", encoding="utf-8") as f:
+                f.write(page.content())
+        except Exception:
+            pass
+
         try:
             result["title"] = page.title()
         except Exception:
