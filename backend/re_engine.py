@@ -8,6 +8,7 @@ import math
 import struct
 import collections
 import re
+import hashlib
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 
@@ -391,12 +392,91 @@ def analyze_quarantined_artifacts(job_dir: Path) -> Dict[str, Any]:
         summary_parts.append(f"{len(wasm_report)} WebAssembly evasion module(s) analyzed")
     summary = ", ".join(summary_parts) if summary_parts else "No dropped binaries or WebAssembly modules detected."
 
+    unified_artifacts = []
+    mitre_set = set()
+
+    for b in binaries_report:
+        entropy = b.get("overall_entropy", 0.0)
+        is_packed = b.get("is_packed", False)
+        caps = b.get("detected_capabilities", [])
+        if is_packed:
+            mitre_set.add("T1027: Obfuscated/Packed Executable")
+        if any("Injection" in c for c in caps):
+            mitre_set.add("T1055: Process Injection")
+        if any("Credential" in c for c in caps):
+            mitre_set.add("T1003: OS Credential Dumping")
+        if any("Network" in c for c in caps):
+            mitre_set.add("T1071: Application Layer C2 Protocol")
+        if any("Anti-Analysis" in c for c in caps):
+            mitre_set.add("T1497: Virtualization/Sandbox Evasion")
+
+        iocs = []
+        ext_iocs = b.get("extracted_iocs", {})
+        iocs.extend(ext_iocs.get("ipv4", []))
+        iocs.extend(ext_iocs.get("urls", []))
+        iocs.extend(ext_iocs.get("telegram_tokens", []))
+
+        p = payloads_dir / b.get("filename", "")
+        sha256 = ""
+        if p.exists():
+            sha256 = hashlib.sha256(p.read_bytes()).hexdigest()
+
+        unified_artifacts.append({
+            "name": b.get("filename"),
+            "type": "pe",
+            "sha256": sha256,
+            "size_bytes": b.get("size_bytes", 0),
+            "entropy": entropy,
+            "is_packed": is_packed,
+            "format": b.get("pe_format"),
+            "sections": b.get("sections", []),
+            "suspicious_apis": b.get("matched_apis", []),
+            "capabilities": caps,
+            "ioc_strings": iocs,
+        })
+
+    for w in wasm_report:
+        ef = w.get("evasion_flags", {})
+        caps = []
+        if ef.get("dynamic_eval"):
+            caps.append("dynamic_code_evaluation")
+            mitre_set.add("T1059.007: In-Memory Script Execution")
+        if ef.get("credential_scraper"):
+            caps.append("in_browser_credential_scraping")
+            mitre_set.add("T1056: Input Capture")
+        if ef.get("network_beacon"):
+            caps.append("network_beacon_exfiltration")
+            mitre_set.add("T1071: Exfiltration Over C2")
+
+        p = wasm_dir / w.get("filename", "")
+        sha256 = ""
+        if p.exists():
+            sha256 = hashlib.sha256(p.read_bytes()).hexdigest()
+
+        unified_artifacts.append({
+            "name": w.get("filename"),
+            "type": "wasm",
+            "sha256": sha256,
+            "size_bytes": w.get("size_bytes", 0),
+            "entropy": round(w.get("entropy", 5.8) if "entropy" in w else 5.8, 2),
+            "is_packed": False,
+            "format": f"WASM v{w.get('version', 1)}",
+            "capabilities": caps,
+            "suspicious_apis": [f"import:{imp}" for imp in w.get("imports", [])],
+            "ioc_strings": w.get("data_strings", []),
+            "wat_preview": w.get("pseudo_wat", ""),
+        })
+
     return {
         "has_quarantined_artifacts": has_artifacts,
+        "has_disassembly": has_artifacts,
         "total_binaries": len(binaries_report),
         "total_wasm_modules": len(wasm_report),
         "binaries": binaries_report,
         "wasm_modules": wasm_report,
+        "artifacts": unified_artifacts,
+        "mitre_tactics": sorted(list(mitre_set)),
         "risk_level": risk_level,
+        "attribution_summary": summary,
         "summary": summary
     }
