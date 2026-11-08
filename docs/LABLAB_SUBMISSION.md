@@ -117,7 +117,7 @@ Phish&Chips implements the hackathon's required **Pattern B: Sandboxed Browser U
 
 - **Zero False-Positive Reputation Fast-Path:** Tranco Top-10K reputable domains (Wikipedia, Google, Gov portals) complete within 5 seconds with guaranteed `SAFE` verdicts, eliminating AI hallucination and saving inference compute.
 - **1-Click Abuse Takedown:** Auto-generates a signed `.tar.gz` Evidence Locker containing screenshots, HAR recordings, and registrar abuse contact details.
-- **Indian Regional Localization:** Full multilingual support in **English, हिन्दी (Hindi), and ಕನ್ನಡ (Kannada)** protecting citizens frequently targeted by fake KYC and electricity bill scams.
+- **Automated SOC Incident Escalation:** Exports structured JSON threat telemetry compatible with SIEM/SOAR platforms, complete with MITRE ATT&CK tags and IOC lists.
 - **Emergency Escalation:** Direct 1-tap dialer for India's **National Cybercrime Helpline (`1930`)** and direct reporting to `cybercrime.gov.in`.
 - **Production Observability:** Native Prometheus `/metrics` and `/api/health` endpoints.
 

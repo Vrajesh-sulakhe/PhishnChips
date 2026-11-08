@@ -90,7 +90,7 @@ When a phishing site attempts to drop an executable payload (e.g. `SBI_Mandatory
 | **Application of Technology** | Effective integration of chosen models and cloud infrastructure | Hardened **Vultr Cloud Compute** VM hosting the FastAPI control plane + Caddy reverse proxy; **Vultr Serverless Inference** powering deep threat reasoning via **GLM-5.3**; Playwright headless browser in cgroups v2; Prometheus `/metrics` telemetry. |
 | **Presentation** | Clarity and effectiveness of project presentation and UX | Production web UI at [139.84.159.12.sslip.io](https://139.84.159.12.sslip.io) featuring an **animated 4-node pipeline graph**, live streaming SSE containment terminal, visual screenshot carousel, REA disassembly view, and dark cyber aesthetic. |
 | **Business Value** | Practical impact and fit in real-world business domains | Resolves the \$10B credential phishing crisis for enterprises, SOC teams, and everyday users. Eliminates analyst fatigue and false positives via Tranco Top-10K fast-path; provides instant legal `.tar.gz` evidence lockers and emergency `1930` cybercrime escalation. |
-| **Originality** | Uniqueness, creativity, and demonstration of agentic behaviors | **Blast Radius Zero** architecture; **Pattern B Human Approval Decoy Pass** allowing controlled canary injection; built-in static reverse engineering (REA) for JavaScript, WASM, and PE binaries; trilingual Indian localization (English/Hindi/Kannada). |
+| **Originality** | Uniqueness, creativity, and demonstration of agentic behaviors | **Blast Radius Zero** architecture; **Pattern B Human Approval Decoy Pass** allowing controlled canary injection; built-in static reverse engineering (REA) for JavaScript, WASM, and PE binaries; automated 1-click abuse takedown packages. |
 
 ---  
 
@@ -183,12 +183,13 @@ Phish&Chips implements the hackathon's required **Pattern B** workflow:
 
 ---
 
-## 6. Indian Regional Localization & Emergency Incident Escalation
+## 6. Automated Abuse Takedown & Incident Escalation
 
-- **Regional Localization:** Integrated one-click language toggle (**English / हिन्दी / ಕನ್ನಡ**) to cater to native language speakers frequently targeted by fake KYC and parcel scams in India.
+- **1-Click Abuse Takedown:** Auto-generates a signed `.tar.gz` Evidence Locker with visual screenshots, network HAR logs, and registrar abuse complaint templates.
 - **Incident Escalation Drawer:** When a `SCAM` or `SUSPICIOUS` verdict is confirmed:
   - Direct 1-tap link to the **National Cyber Crime Reporting Portal** (`cybercrime.gov.in`).
   - Direct dialer to the **National Financial Fraud Helpline** (`1930`).
+  - Structured JSON export for enterprise SIEM/SOAR incident response.
   - Emergency bank profile freeze checklist.
 
 ---

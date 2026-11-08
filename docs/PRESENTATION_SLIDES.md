@@ -110,17 +110,17 @@
 
 ---
 
-## Slide 7: Real-World Help for Everyday People
-### From Threat Detection to Immediate Action
-*Giving victims, everyday citizens, and security teams the exact tools to fight back.*
+## Slide 7: From Threat Detection to Immediate Action
+### Giving SOC Teams, Fraud Desks, and Everyday Users Real Remediation Tools
+*Don't just detect scams—shut them down with zero false alarms.*
 
-1. **1-Click Takedown Pack:** Don't just detect scams—shut them down. With one click, download a signed evidence pack (`.tar.gz`) with screenshots and logs ready to send to web hosts to get the fake site taken offline.
-2. **In Your Native Language:** Scammers specifically target elderly or non-technical people in regional languages. Phish&Chips supports **English, हिन्दी (Hindi), and ಕನ್ನಡ (Kannada)** so anyone can use it with confidence.
-3. **1-Tap 1930 Helpline:** If a scam is confirmed, the app gives Indian users an instant 1-tap dialer for the **National Cybercrime Helpline (1930)**, direct links to `cybercrime.gov.in`, and emergency bank freeze checklists.
-4. **Zero False Alarms (Instant Safe Fast-Path):** Nobody likes an overzealous security tool that cries wolf. Phish&Chips checks the Tranco Top-10K reputable domains (like Wikipedia, Google, or government portals). If you scan Wikipedia, it confirms it as SAFE in under 3 seconds with zero false alarms.
+1. **1-Click Abuse Takedown Package:** Auto-generates a signed `.tar.gz` Evidence Locker containing full screenshots, HAR network traces, DOM dumps, and registrar abuse desk contacts for immediate domain suspension.
+2. **Automated SOC Incident Escalation:** Exports structured JSON threat telemetry compatible with SIEM/SOAR platforms (Splunk, Sentinel), complete with MITRE ATT&CK tags and IOC lists.
+3. **1-Tap Emergency Helpline Integration:** Direct 1-tap dialer for the National Cybercrime Helpline (`1930`), direct reporting portal links to `cybercrime.gov.in`, and emergency bank profile freeze checklists for victims.
+- **Zero False-Positive Reputation Fast-Path:** Tranco Top-10K reputable domains (like Wikipedia, Google, or government portals) verify in under 3 seconds with a guaranteed `SAFE` verdict—eliminating false alarms and conserving compute.
 
 > **Speaker Notes:**
-> "Finding a scam is only half the battle. What do you do once you find one? Phish&Chips gives users immediate, practical remediation. First: a 1-click takedown pack that you can email to the hosting provider to get the fake website shut down. Second: full multilingual support in English, Hindi, and Kannada, because frontline victims in India are heavily targeted in their local languages. Third: an emergency helpline drawer with a 1-tap dialer for India's 1930 Cybercrime helpline. And finally, trusted websites like Wikipedia are verified in 3 seconds with zero false alarms."
+> "Finding a scam is only half the battle. What do you do once you find one? Phish&Chips gives users immediate, practical remediation. First: a 1-click abuse takedown pack that you can email to the hosting provider to get the fake website shut down. Second: structured SOC incident escalation with full MITRE ATT&CK tagging and IOC export for enterprise SIEMs. Third: an emergency helpline drawer with a 1-tap dialer for the 1930 Cybercrime helpline and bank freeze checklists. And finally, trusted websites like Wikipedia are verified in under 3 seconds with zero false alarms via our Tranco fast-path."
 
 ---
 

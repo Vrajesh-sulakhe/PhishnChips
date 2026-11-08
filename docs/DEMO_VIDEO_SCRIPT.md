@@ -102,7 +102,7 @@
 - **Spoken Narration:**
   > "Crucially, Phish&Chips eliminates false positives. Detonating a trusted site like Wikipedia completes in under 5 seconds via our Tranco Top-10K reputation fast-path with zero model hallucination.
   >
-  > For confirmed scams, we generate a 1-click legal takedown package and provide an emergency escalation drawer for Indian citizens featuring the 1930 Cybercrime Helpline and trilingual support.
+  > For confirmed scams, we generate a 1-click legal takedown package and provide an emergency escalation drawer featuring the 1930 Cybercrime Helpline and structured SIEM reporting.
   >
   > Phish&Chips is deployed, fully functional, and live right now. Thank you Vultr and LabLab!"
 - **Judge Cue:** Demonstrates false-positive controls, business value, regional localization, and operational readiness.
