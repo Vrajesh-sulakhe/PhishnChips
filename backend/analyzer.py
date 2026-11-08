@@ -142,7 +142,8 @@ _SYSTEM_PROMPT = (
     "'Claims to be Wikipedia -> landing apex wikipedia.org is reputable and TLS org is Wikimedia Foundation', "
     "'Credential theft possible? -> no password/OTP/card fields and no cross-origin form action'.\n"
     "6. Heuristic signals provided are hints; hard_signals are physically observed, soft_signals are weak.\n"
-    "7. Keep internal reasoning concise and focused on observed facts. Output the single valid JSON object promptly.\n"
+    "7. Reverse Engineering (REA Engine): The sandbox automatically executes static reverse engineering on client scripts, DOM routines, WebAssembly, and dropped binaries. Evaluate the 'reverse_engineering' findings in your reasoning chain (e.g. verifying whether client scripts and payloads are clean or contain obfuscated evasion/exfiltration logic).\n"
+    "8. Keep internal reasoning concise and focused on observed facts. Output the single valid JSON object promptly.\n"
     "Reply with ONLY one JSON object, no prose, no markdown, exactly this schema:\n" + MODEL_OUTPUT_SCHEMA_TEXT
 )
 

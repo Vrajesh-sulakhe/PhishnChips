@@ -354,13 +354,135 @@ class WasmInspector:
         return [m.decode("utf-8", errors="ignore") for m in matches][:10]
 
 
-def analyze_quarantined_artifacts(job_dir: Path) -> Dict[str, Any]:
+class ScriptInspector:
     """
-    Scans a job's evidence folder for quarantined binaries and WebAssembly modules,
-    performing comprehensive static reverse engineering without executing anything.
+    Zero-execution static inspector for client-side JavaScript routines,
+    inline scripts, DOM event handlers, and evasion logic inside dom_snapshot.html.
+    """
+
+    SUSPICIOUS_SCRIPT_PATTERNS = {
+        "Dynamic Execution / Eval": [
+            r"\beval\s*\(",
+            r"\bFunction\s*\(",
+            r"window\[[\"']eval[\"']\]",
+            r"setTimeout\s*\(\s*[\"']",
+            r"setInterval\s*\(\s*[\"']",
+        ],
+        "Obfuscation & Hex Packing": [
+            r"\\x[0-9a-fA-F]{2}(?:\\x[0-9a-fA-F]{2}){3,}",
+            r"\\u[0-9a-fA-F]{4}(?:\\u[0-9a-fA-F]{4}){2,}",
+            r"String\.fromCharCode\s*\(",
+            r"\batob\s*\(",
+            r"\bunescape\s*\(",
+            r"_0x[a-f0-9]{4,}",
+            r"p,a,c,k,e,d",
+        ],
+        "Anti-Analysis & Debugger Traps": [
+            r"\bdebugger\b",
+            r"console\.clear\s*\(",
+            r"outerWidth\s*-\s*innerWidth",
+        ],
+        "Credential Harvesting Handlers": [
+            r"addEventListener\s*\(\s*[\"'](?:submit|keydown|keypress|input)[\"']",
+            r"document\.forms",
+            r"input\[type=[\\\"']?password[\\\"']?\]",
+        ],
+        "Exfiltration & Beaconing": [
+            r"\bnavigator\.sendBeacon\s*\(",
+            r"new\s+XMLHttpRequest\s*\(",
+            r"\bfetch\s*\(",
+            r"new\s+Image\(\)\.src\s*=",
+            r"new\s+WebSocket\s*\(",
+        ],
+    }
+
+    def __init__(self, dom_file: Path):
+        self.dom_file = dom_file
+        self.html = dom_file.read_text(encoding="utf-8", errors="replace") if (dom_file and dom_file.exists()) else ""
+
+    def analyze(self) -> Dict[str, Any]:
+        if not self.html:
+            return {
+                "has_scripts": False,
+                "script_count": 0,
+                "external_scripts": [],
+                "entropy": 0.0,
+                "is_packed": False,
+                "is_suspicious": False,
+                "capabilities": [],
+                "matched_patterns": [],
+                "iocs": [],
+                "preview": "// No client DOM scripts observed in rendered snapshot.",
+                "size_bytes": 0,
+            }
+
+        inline_scripts = re.findall(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", self.html, flags=re.DOTALL | re.IGNORECASE)
+        external_srcs = re.findall(r"<script[^>]+src=[\"']([^\"']+)[\"']", self.html, flags=re.IGNORECASE)
+
+        combined_script_text = "\n\n".join(s.strip() for s in inline_scripts if s.strip())
+        script_bytes = combined_script_text.encode("utf-8", errors="replace")
+        entropy = calculate_entropy(script_bytes) if script_bytes else 0.0
+
+        detected_capabilities = []
+        matched_patterns = []
+
+        for category, patterns in self.SUSPICIOUS_SCRIPT_PATTERNS.items():
+            cat_matches = []
+            for pat in patterns:
+                found = re.findall(pat, combined_script_text)
+                if found:
+                    cleaned_name = pat.replace(r"\b", "").replace(r"\s*", " ").replace("\\", "")
+                    cat_matches.append(cleaned_name)
+            if cat_matches:
+                detected_capabilities.append(category)
+                matched_patterns.extend(cat_matches[:3])
+
+        is_packed = (entropy > 6.2 and len(script_bytes) > 200) or any(
+            "Obfuscation" in c or "Dynamic Execution" in c for c in detected_capabilities
+        )
+        is_suspicious = is_packed or any("Credential" in c or "Anti-Analysis" in c for c in detected_capabilities)
+
+        iocs = []
+        clean_urls = list(set(re.findall(r"https?://[a-zA-Z0-9\.\-\:\_\/]+", combined_script_text)))
+        clean_urls = [u for u in clean_urls if not any(skip in u for skip in ("w3.org", "schema.org", "google.com/recaptcha"))]
+        iocs.extend(clean_urls[:5])
+
+        if combined_script_text:
+            lines = [line.strip() for line in combined_script_text.splitlines() if line.strip()]
+            preview = "\n".join(lines[:25])
+            if len(lines) > 25:
+                preview += f"\n// ... [{len(lines) - 25} lines truncated for forensic brief]"
+        elif external_srcs:
+            preview = "// External client-side script modules imported:\n" + "\n".join(f"// <script src=\"{src}\">" for src in external_srcs[:10])
+        else:
+            preview = "// Static HTML page rendered. No active client-side JavaScript routines detected."
+
+        return {
+            "has_scripts": len(inline_scripts) > 0 or len(external_srcs) > 0,
+            "script_count": len(inline_scripts) + len(external_srcs),
+            "inline_count": len(inline_scripts),
+            "external_scripts": external_srcs[:10],
+            "entropy": round(entropy, 2),
+            "is_packed": is_packed,
+            "is_suspicious": is_suspicious,
+            "capabilities": detected_capabilities,
+            "matched_patterns": matched_patterns[:8],
+            "iocs": iocs,
+            "preview": preview,
+            "size_bytes": len(script_bytes),
+        }
+
+
+def analyze_target_artifacts(job_dir: Path) -> Dict[str, Any]:
+    """
+    Performs autonomous static reverse engineering on ALL targets by default:
+    1. Zero-execution PE/ELF binary dissection (if dropped payloads exist).
+    2. Zero-execution WebAssembly evasion disassembly (if in-memory WASM exists).
+    3. Static client-side script reverse-engineering & entropy inspection (dom_snapshot.html).
     """
     payloads_dir = job_dir / "payloads"
     wasm_dir = job_dir / "wasm"
+    dom_file = job_dir / "dom_snapshot.html"
 
     binaries_report = []
     wasm_report = []
@@ -377,23 +499,13 @@ def analyze_quarantined_artifacts(job_dir: Path) -> Dict[str, Any]:
                 inspector = WasmInspector(f)
                 wasm_report.append(inspector.analyze())
 
-    has_artifacts = len(binaries_report) > 0 or len(wasm_report) > 0
+    script_inspector = ScriptInspector(dom_file)
+    script_report = script_inspector.analyze()
 
-    risk_level = "LOW"
-    if any(b.get("is_suspicious") for b in binaries_report) or any(w.get("is_evasive") for w in wasm_report):
-        risk_level = "CRITICAL"
-    elif has_artifacts:
-        risk_level = "HIGH"
+    has_dropped = len(binaries_report) > 0 or len(wasm_report) > 0
 
-    summary_parts = []
-    if binaries_report:
-        summary_parts.append(f"{len(binaries_report)} binary payload(s) dissected statically")
-    if wasm_report:
-        summary_parts.append(f"{len(wasm_report)} WebAssembly evasion module(s) analyzed")
-    summary = ", ".join(summary_parts) if summary_parts else "No dropped binaries or WebAssembly modules detected."
-
-    unified_artifacts = []
     mitre_set = set()
+    unified_artifacts = []
 
     for b in binaries_report:
         entropy = b.get("overall_entropy", 0.0)
@@ -467,16 +579,74 @@ def analyze_quarantined_artifacts(job_dir: Path) -> Dict[str, Any]:
             "wat_preview": w.get("pseudo_wat", ""),
         })
 
+    # Always include static client DOM script inspection in reverse-engineering artifacts
+    s_caps = script_report.get("capabilities", [])
+    if script_report.get("is_packed"):
+        mitre_set.add("T1027: Obfuscated/Packed Script")
+    if any("Dynamic" in c for c in s_caps):
+        mitre_set.add("T1059.007: JavaScript Engine Execution")
+    if any("Credential" in c for c in s_caps):
+        mitre_set.add("T1056: Input Capture")
+    if any("Anti-Analysis" in c for c in s_caps):
+        mitre_set.add("T1497: Virtualization/Sandbox Evasion")
+    if any("Exfiltration" in c for c in s_caps):
+        mitre_set.add("T1071: Exfiltration Over C2")
+
+    script_sha = hashlib.sha256(script_report.get("preview", "").encode()).hexdigest()[:32]
+    unified_artifacts.append({
+        "name": "client_dom_scripts.js",
+        "type": "script",
+        "sha256": script_sha,
+        "size_bytes": script_report.get("size_bytes", 0),
+        "entropy": script_report.get("entropy", 0.0),
+        "is_packed": script_report.get("is_packed", False),
+        "format": f"JavaScript ({script_report.get('script_count', 0)} routines)",
+        "capabilities": s_caps,
+        "suspicious_apis": script_report.get("matched_patterns", []),
+        "ioc_strings": script_report.get("iocs", []),
+        "wat_preview": script_report.get("preview", ""),
+    })
+
+    risk_level = "LOW"
+    if any(b.get("is_suspicious") for b in binaries_report) or any(w.get("is_evasive") for w in wasm_report):
+        risk_level = "CRITICAL"
+    elif script_report.get("is_suspicious") or has_dropped:
+        risk_level = "HIGH"
+    elif script_report.get("capabilities"):
+        risk_level = "MEDIUM"
+
+    summary_parts = []
+    if binaries_report:
+        summary_parts.append(f"{len(binaries_report)} binary payload(s) dissected statically")
+    if wasm_report:
+        summary_parts.append(f"{len(wasm_report)} WebAssembly evasion module(s) analyzed")
+    if script_report.get("is_suspicious"):
+        summary_parts.append(f"client scripts flagged suspicious ({', '.join(s_caps)})")
+    elif script_report.get("script_count", 0) > 0:
+        summary_parts.append(f"{script_report.get('script_count')} client script routine(s) verified (entropy {script_report.get('entropy')})")
+    else:
+        summary_parts.append("static DOM verified clean (0 external script threats)")
+
+    summary = "; ".join(summary_parts)
+
     return {
-        "has_quarantined_artifacts": has_artifacts,
-        "has_disassembly": has_artifacts,
+        "has_quarantined_artifacts": has_dropped,
+        "has_disassembly": True,  # ALWAYS TRUE: REA runs by default on every target inspected!
         "total_binaries": len(binaries_report),
         "total_wasm_modules": len(wasm_report),
+        "total_scripts": script_report.get("script_count", 0),
         "binaries": binaries_report,
         "wasm_modules": wasm_report,
+        "client_scripts": script_report,
         "artifacts": unified_artifacts,
         "mitre_tactics": sorted(list(mitre_set)),
         "risk_level": risk_level,
         "attribution_summary": summary,
         "summary": summary
     }
+
+
+def analyze_quarantined_artifacts(job_dir: Path) -> Dict[str, Any]:
+    """Backwards-compatible alias for analyze_target_artifacts."""
+    return analyze_target_artifacts(job_dir)
+

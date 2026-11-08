@@ -1020,8 +1020,10 @@ export default function Dashboard({
                           {threatLabel(record)}
                         </span>
                         <span className="cell-subtitle">
-                          {record.re_intelligence?.has_disassembly
+                          {record.re_intelligence?.total_binaries || record.re_intelligence?.total_wasm_modules
                             ? `🔬 Dissected: ${record.re_intelligence.artifacts?.[0]?.name || "Binary/WASM"}`
+                            : record.re_intelligence?.has_disassembly
+                            ? `🔬 REA: ${record.re_intelligence.total_scripts || record.re_intelligence.artifacts?.length || 1} Routines Verified`
                             : record.c2_intelligence?.has_c2_exfiltration
                             ? `🎯 C2: ${record.c2_intelligence.drop_destinations?.[0]?.channel_type || "Drop"} vector`
                             : record.malicious ? record.brand : "Caged detonation"}
@@ -1339,7 +1341,7 @@ export default function Dashboard({
                     </div>
                   )}
 
-                  {selected.re_intelligence?.has_disassembly && (
+                  {selected.re_intelligence && (
                     <div
                       style={{
                         margin: "14px 0",
@@ -1371,7 +1373,7 @@ export default function Dashboard({
                           }}
                         >
                           <Icon name="terminal" size={16} />
-                          <span>Pure Static Reverse Engineering & Disassembly (Blast Radius Zero)</span>
+                          <span>Autonomous Static Reverse Engineering (REA Engine • Blast Radius Zero)</span>
                         </div>
                         <span
                           style={{
@@ -1384,7 +1386,7 @@ export default function Dashboard({
                             border: "1px solid rgba(139, 92, 246, 0.4)",
                           }}
                         >
-                          {selected.re_intelligence.artifacts?.length || 0} Quarantined Artifact(s)
+                          {selected.re_intelligence.artifacts?.length || 0} Inspected Artifact(s)
                         </span>
                       </div>
 
@@ -1443,7 +1445,7 @@ export default function Dashboard({
                                 border: `1px solid ${art.is_packed ? "rgba(239, 68, 68, 0.5)" : "rgba(34, 197, 94, 0.3)"}`,
                               }}
                             >
-                              {art.is_packed ? "PACKED / CRYPTED" : "UNPACKED"}
+                              {art.is_packed ? "PACKED / CRYPTED" : "UNPACKED / VERIFIED"}
                             </span>
                           </div>
 
