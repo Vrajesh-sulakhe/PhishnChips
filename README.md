@@ -3,8 +3,96 @@
 > **Tagline:** Fresh phish, fried in a sandbox.  
 > **Event:** Vultr Agent Rush Hackathon on lablab.ai  
 > **Track:** **01 · Blast Radius Zero**  
-> **Live Secure URL:** [https://139.84.159.12.sslip.io](https://139.84.159.12.sslip.io) (Auto TLS via Let's Encrypt / Caddy)  
+> **Live Secure Production URL:** [https://139.84.159.12.sslip.io](https://139.84.159.12.sslip.io) (Auto-TLS via Let's Encrypt / Caddy)  
 > **Direct Control Plane:** [http://139.84.159.12:8000](http://139.84.159.12:8000)  
+> **Health Check & Telemetry:** [https://139.84.159.12.sslip.io/api/health](https://139.84.159.12.sslip.io/api/health)  
+> **Prometheus Metrics:** [https://139.84.159.12.sslip.io/metrics](https://139.84.159.12.sslip.io/metrics)  
+> **Public Repository:** [https://github.com/Vrajesh-sulakhe/PhishnChips](https://github.com/Vrajesh-sulakhe/PhishnChips)
+
+---
+
+## ⚡ Vultr Hackathon Showcase & Judge Scorecard
+
+This section provides an immediate, verifiable mapping of **Phish&Chips** against the **Vultr Agent Rush Hackathon** guidelines, architecture requirements, and judging criteria for **Track 01: Blast Radius Zero**.
+
+### 1. How Vultr Powers Phish&Chips
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                        VULTR INFRASTRUCTURE & SERVICE MAPPING                          │
+├──────────────────────────────┬─────────────────────────────────────────────────────────┤
+│ Vultr Service                │ Role in Phish&Chips Solution                            │
+├──────────────────────────────┼─────────────────────────────────────────────────────────┤
+│ Vultr Cloud Compute (BLR)    │ Central hardened host in Bangalore (4 vCPUs / 8 GB RAM  │
+│ 139.84.159.12.vultrusercontent│ / 160 GB NVMe SSD, Ubuntu 24.04 LTS). Orchestrates the  │
+│                              │ FastAPI control plane, Docker cgroups v2, and Caddy.    │
+├──────────────────────────────┼─────────────────────────────────────────────────────────┤
+│ Vultr Serverless Inference   │ High-throughput AI threat reasoning engine via          │
+│ api.vultrinference.com/v1    │ GLM-5.3 (and Qwen 2.5/3.8 multi-model fallback). Evalu- │
+│                              │ ates forensic DOM telemetry, visual screenshots, and    │
+│                              │ REA disassembly into strict Pydantic verdicts.          │
+├──────────────────────────────┼─────────────────────────────────────────────────────────┤
+│ Vultr Isolated Virtual Net   │ Dedicated `phishnet` bridge (172.30.0.0/16) with kernel-│
+│ (phishnet Bridge + iptables) │ level iptables rules dropping all traffic to the host   │
+│                              │ gateway, RFC1918 subnets, and cloud metadata (169.254). │
+└──────────────────────────────┴─────────────────────────────────────────────────────────┘
+```
+
+### 2. Backend & Deployment Architecture
+
+Phish&Chips operates on a **Host/Agent/Caged Sandbox** model where the host never executes untrusted code, and the untrusted code can never escape the cage:
+
+1. **Edge Ingress & TLS Termination:** Caddy reverse proxy terminates TLS 1.3 on `139.84.159.12.sslip.io` with automated Let's Encrypt certificates and routes traffic to FastAPI on port 8000.
+2. **Central Control Plane (`backend/`):** FastAPI orchestrator validates target URLs, enforces SSRF defenses against local/private IPs, manages SQLite 3 (WAL mode) telemetry, and broadcasts real-time Server-Sent Events (`/api/scan/{job_id}/stream`).
+3. **Caged Sandbox Execution (`sandbox/`):** An ephemeral Docker container (`phishchips-sandbox`) is spawned on the `phishnet` bridge. A non-root user (`runner`, UID 10001) drives headless Playwright Chromium under strict cgroup limits (`--cpus=1`, `--memory=1g`, `--pids-limit=256`), with `--read-only` rootfs and `--cap-drop=ALL`.
+4. **Static Reverse Engineering Engine (`backend/re_engine.py`):** On every scan, the REA engine extracts and disassembles all inline scripts, external JS routines, intercepted binary drops (`.exe`/`.bin`), and WebAssembly bytecode (`.wasm`). It computes entropy, extracts IOC strings, maps capabilities to MITRE ATT&CK tactics, and renders disassembly cards directly in the UI.
+5. **Tier-2 AI Synthesis (`backend/analyzer.py`):** Structured telemetry and screenshots are dispatched to Vultr Serverless Inference (`api.vultrinference.com/v1`) using model `glm-5.3`. The model validates against strict Pydantic schemas (`backend/schemas.py`) and outputs actionable indicators, confidence scores, and brand impersonation vectors.
+6. **Destruction & Janitor:** The ephemeral container is destroyed via `--rm` and finally blocks. A background janitor purges stale artifacts, leaving a final verified log: `🍟 Phish fried. Sandbox destroyed.`
+
+### 3. Agent Use Case & Real Task Execution
+
+- **The Problem:** Modern phishing attacks (fake KYC notifications, UPI refund portals, banking clones, malicious invoice drops) evade traditional static blocklists by using ephemeral subdomains, client-side JavaScript obfuscation, and dynamic browser sniffing.
+- **The Agentic Workflow:** Phish&Chips acts as an autonomous threat intelligence agent:
+  - **Task 1: Safe Autonomous Detonation:** Intercepts untrusted URLs, opens them inside a quarantined browser, and records every redirect hop, network request, visual render, and console error.
+  - **Task 2: Active Credential Harvesting Discovery:** Dissects DOM inputs. If credential/OTP fields are detected, it pauses and prompts the operator (**Pattern B: Human Authorization Decoy Pass**) to inject synthetic canary data and trace the attacker's exfiltration C2 server.
+  - **Task 3: Automated Payload Quenching:** Detects drive-by downloads or payload injection, captures the dropped artifact into an isolated temporary volume, runs static analysis and entropy checks without executing binary code, and reports the SHA-256 hash.
+  - **Task 4: 1-Click Takedown & Incident Escalation:** Auto-generates a signed legal takedown package (`.tar.gz` evidence locker) for hosting providers and registrar abuse desks, complete with screenshots, HAR recordings, and direct links to India's National Cybercrime Portal (`1930`).
+
+### 4. Challenge 1: The Mandatory Containment Moment
+
+In Track 01 (**Blast Radius Zero**), containment is not an afterthought—it is the core deliverable. Phish&Chips exhibits **two explicit, verifiable containment moments**:
+
+#### Containment Moment 1: Kernel-Enforced Network Isolation
+From inside the active container on the `phishnet` bridge (`172.30.0.0/16`), iptables strictly blocks any attempt to reach the host gateway, host public IP, internal RFC1918 networks, or cloud metadata endpoints (`169.254.169.254`).
+```bash
+# Verify containment on live production host:
+curl -s https://139.84.159.12.sslip.io/api/health | jq .iptables_phishnet
+# Returns: "Enforced (Host & RFC1918 Dropped)"
+```
+Verification script execution (`scripts/verify_containment.sh`):
+```text
+  Testing Public Internet (Cloudflare 1.1.1.1) ...  [PASS] REACHABLE (HTTP 301)
+  Testing Host Bridge Gateway (172.30.0.1:8000) ... [PASS] BLOCKED (Code: 28)
+  Testing Host Public IP (139.84.159.12:8000) ...   [PASS] BLOCKED (Code: 28)
+  Testing Cloud Metadata (169.254.169.254) ...      [PASS] BLOCKED (Code: 28)
+  Testing Private Subnet 10.0.0.1 ...               [PASS] BLOCKED (Code: 28)
+  Testing Private Subnet 192.168.1.1 ...            [PASS] BLOCKED (Code: 28)
+  🎉 ALL CONTAINMENT CHECKS PASSED. Blast Radius Zero verified!
+```
+
+#### Containment Moment 2: Intercepted Drive-By Malware Quarantine
+When a phishing site attempts to drop an executable payload (e.g. `SBI_Mandatory_Security_Patch.exe`) or inject WebAssembly (`.wasm`), Playwright's download handler intercepts the file stream, cancels execution, and saves it directly to an isolated `/out` quarantine volume. The REA Engine inspects the PE headers, calculates entropy ($> 7.5 = \text{packed/encrypted}$), extracts IOC strings, and flags MITRE `T1204.002: Malicious File`, all with **zero execution of binary bytes**.
+
+### 5. Alignment with Hackathon Judging Criteria
+
+| Criteria | Hackathon Evaluation Standard | Phish&Chips Implementation & Evidence |
+|:---|:---|:---|
+| **Application of Technology** | Effective integration of chosen models and cloud infrastructure | Hardened **Vultr Cloud Compute** VM hosting the FastAPI control plane + Caddy reverse proxy; **Vultr Serverless Inference** powering deep threat reasoning via **GLM-5.3**; Playwright headless browser in cgroups v2; Prometheus `/metrics` telemetry. |
+| **Presentation** | Clarity and effectiveness of project presentation and UX | Production web UI at [139.84.159.12.sslip.io](https://139.84.159.12.sslip.io) featuring an **animated 4-node pipeline graph**, live streaming SSE containment terminal, visual screenshot carousel, REA disassembly view, and dark cyber aesthetic. |
+| **Business Value** | Practical impact and fit in real-world business domains | Resolves the \$10B credential phishing crisis for enterprises, SOC teams, and everyday users. Eliminates analyst fatigue and false positives via Tranco Top-10K fast-path; provides instant legal `.tar.gz` evidence lockers and emergency `1930` cybercrime escalation. |
+| **Originality** | Uniqueness, creativity, and demonstration of agentic behaviors | **Blast Radius Zero** architecture; **Pattern B Human Approval Decoy Pass** allowing controlled canary injection; built-in static reverse engineering (REA) for JavaScript, WASM, and PE binaries; trilingual Indian localization (English/Hindi/Kannada). |
+
+---  
 
 ---
 

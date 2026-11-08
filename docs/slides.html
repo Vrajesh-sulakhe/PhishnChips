@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phish&Chips · Vultr Agent Rush Hackathon Presentation Deck</title>
+  <style>
+    :root {
+      --bg: #090a0f;
+      --card-bg: #12141c;
+      --card-border: #1f2433;
+      --accent-red: #ef4444;
+      --accent-green: #10b981;
+      --accent-blue: #3b82f6;
+      --accent-amber: #f59e0b;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* Top Progress Bar */
+    .progress-bar-container {
+      height: 4px;
+      width: 100%;
+      background: #1f2433;
+      position: relative;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-red), var(--accent-amber), var(--accent-green));
+      width: 12.5%;
+      transition: width 0.3s ease;
+    }
+
+    /* Header Nav */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 24px;
+      border-bottom: 1px solid var(--card-border);
+      background: rgba(18, 20, 28, 0.7);
+      backdrop-filter: blur(10px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: -0.5px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-vultr {
+      background: rgba(0, 122, 255, 0.15);
+      border: 1px solid rgba(0, 122, 255, 0.4);
+      color: #60a5fa;
+    }
+
+    .badge-track {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #f87171;
+    }
+
+    .nav-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .slide-counter {
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    button.btn {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+    }
+
+    button.btn:hover {
+      border-color: var(--accent-blue);
+      background: #1a1e2b;
+    }
+
+    /* Slide Deck Viewport */
+    .deck-container {
+      flex: 1;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+    }
+
+    .slide {
+      position: absolute;
+      width: 90%;
+      max-width: 1100px;
+      height: 82vh;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 40px;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      animation: fadeIn 0.3s ease;
+      overflow-y: auto;
+    }
+
+    .slide.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .slide-header {
+      margin-bottom: 24px;
+    }
+
+    .slide-tag {
+      font-family: var(--font-mono);
+      color: var(--accent-red);
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+
+    .slide-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #fff;
+      line-height: 1.2;
+    }
+
+    .slide-subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .slide-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    /* Grid Layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    .feature-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      padding: 20px;
+      border-radius: 8px;
+    }
+
+    .feature-card h4 {
+      font-size: 1.1rem;
+      color: #fff;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .feature-card p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    /* Terminal & Code Blocks */
+    pre.code-block {
+      background: #0d0f15;
+      border: 1px solid #1a1e2b;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: #a7f3d0;
+      overflow-x: auto;
+      line-height: 1.4;
+    }
+
+    /* Speaker Notes Modal */
+    .notes-drawer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #11141e;
+      border-top: 2px solid var(--accent-blue);
+      padding: 16px 24px;
+      transform: translateY(100%);
+      transition: transform 0.3s ease;
+      z-index: 100;
+      box-shadow: 0 -10px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .notes-drawer.open {
+      transform: translateY(0);
+    }
+
+    .notes-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--accent-blue);
+    }
+
+    .notes-text {
+      color: var(--text-main);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    /* Footer info */
+    .slide-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 16px;
+      border-top: 1px solid var(--card-border);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .footer-left {
+      display: flex;
+      gap: 16px;
+    }
+
+    .footer-highlight {
+      color: var(--accent-green);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="progress-bar-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <header>
+    <div class="brand">
+      <span>🐟🍟 Phish&Chips</span>
+      <span class="badge badge-track">Track 01 · Blast Radius Zero</span>
+      <span class="badge badge-vultr">Powered by Vultr</span>
+    </div>
+    <div class="nav-controls">
+      <span class="slide-counter" id="slideCounter">Slide 1 / 8</span>
+      <button class="btn" id="prevBtn" onclick="prevSlide()">◀ Prev</button>
+      <button class="btn" id="nextBtn" onclick="nextSlide()">Next ▶</button>
+      <button class="btn" id="notesToggle" onclick="toggleNotes()">Speaker Notes (N)</button>
+    </div>
+  </header>
+
+  <main class="deck-container">
+
+    <!-- SLIDE 1: Title -->
+    <div class="slide active" data-slide="1">
+      <div class="slide-header">
+        <div class="slide-tag">Vultr Agent Rush Hackathon</div>
+        <h1 class="slide-title">🐟🍟 Phish&Chips</h1>
+        <p class="slide-subtitle">Fresh phish, fried in a sandbox. Ephemeral detonation & threat intelligence agent.</p>
+      </div>
+      <div class="slide-content">
+        <div class="grid-2">
+          <div class="feature-card" style="border-left: 4px solid var(--accent-red);">
+            <h4>🛡️ Challenge Mandate</h4>
+            <p><strong>Track 01: Blast Radius Zero.</strong> Untrusted links, fake KYC notices, and malicious payloads must be safely detonated and analyzed without ever exposing the host system, credentials, or analyst devices.</p>
+          </div>
+          <div class="feature-card" style="border-left: 4px solid var(--accent-blue);">
+            <h4>⚡ Cloud & Model Infrastructure</h4>
+            <p>Built directly on <strong>Vultr Cloud Compute (Bangalore)</strong> with <strong>Vultr Serverless Inference</strong> powering deep AI threat synthesis via the flagship <strong>GLM-5.3</strong> reasoning engine.</p>
+          </div>
+        </div>
+        <div class="feature-card" style="margin-top: 12px; background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.2);">
+          <p style="color: #6ee7b7; font-family: var(--font-mono); font-size: 0.9rem;">
+            🌐 <strong>Live Production Instance:</strong> https://139.84.159.12.sslip.io<br>
+            👥 <strong>Team:</strong> alphax · <strong>Status:</strong> Deployed & 100% Operational
+          </p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <div class="footer-left">
+          <span>Press <strong>[Space]</strong> or <strong>[→]</strong> to advance</span>
+        </div>
+        <div>
+          <span class="footer-highlight">Vultr Cloud Compute · Vultr Serverless Inference</span>
+        </div>
+      </div>
+      <div class="notes-data" style="display:none;">
+        "Hello judges and fellow builders! Welcome to Phish&Chips: an autonomous, ephemeral detonation and threat analysis platform. In an era where phishing attacks bypass traditional static blocklists in minutes, Phish&Chips introduces Blast Radius Zero — an agentic sandbox running on Vultr Cloud Compute that safely visits untrusted links, reverses malicious scripts and binary drops, executes controlled canary submissions, and synthesizes deep threat verdicts using Vultr Serverless Inference."
+      </div>
+    </div>
+
+    <!-- SLIDE 2: Problem -->
+    <div class="slide" data-slide="2">
+      <div class="slide-header">
+        <div class="slide-tag">The Threat Landscape</div>
+        <h2 class="slide-title">The $10B Phishing Crisis & Analyst Vulnerability</h2>
+        <p class="slide-subtitle">Why traditional antivirus and static domain blocklists fail against modern campaigns.</p>
+      </div>
+      <div class="slide-content">
+        <div class="grid-3">
+          <div class="feature-card">
+            <h4>⏱️ Ephemeral Lifespans</h4>
+            <p>Attack domains average only 4–8 hours of active life. By the time URL feeds update, thousands of credentials have already been stolen.</p>
+          </div>
+          <div class="feature-card">
+            <h4>🎭 Evasive Techniques</h4>
+            <p>Attackers use browser fingerprinting, bot-detection evasion, obfuscated JavaScript, and WebAssembly to hide their true payload.</p>
+          </div>
+          <div class="feature-card">
+            <h4>☣️ Analyst Blast Radius</h4>
+            <p>Security teams and everyday users who inspect links risk malware drive-bys, cookie compromise, and lateral network infection.</p>
+          </div>
+        </div>
+        <div class="feature-card" style="border-left: 4px solid var(--accent-amber);">
+          <h4>The Core Question</h4>
+          <p>How can security teams, fraud desks, and everyday citizens safely interact with and dissect a hostile link in real time without putting themselves or their systems at risk?</p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <div class="footer-left"><span>Track 01: Blast Radius Zero</span></div>
+        <div><span class="footer-highlight">The Problem</span></div>
+      </div>
+      <div class="notes-data" style="display:none;">
+        "Every day, millions of people receive deceptive SMS messages, UPI refund links, or urgent KYC verification alerts. Traditional blocklists are too slow because attackers spin up new domains constantly. But opening these links to inspect them is dangerous — they fingerprint your browser, download malicious executables, or steal sensitive tokens. How do we inspect untrusted links without putting ourselves or our infrastructure at risk?"
+      </div>
+    </div>
+
+    <!-- SLIDE 3: Blast Radius Zero -->
+    <div class="slide" data-slide="3">
+      <div class="slide-header">
+        <div class="slide-tag">Core Philosophy</div>
+        <h2 class="slide-title">Blast Radius Zero: Containment as the Product</h2>
+        <p class="slide-subtitle">Four non-negotiable guarantees enforced on every single detonation.</p>
+      </div>
+      <div class="slide-content">
+        <div class="grid-2">
+          <div class="feature-card">
+            <h4>🔒 1. Process Stripping</h4>
+            <p>Unprivileged user (<code>runner</code>, UID 10001). All Linux capabilities stripped via <code>--cap-drop=ALL</code>, privilege escalation blocked with <code>--security-opt=no-new-privileges</code>, and root filesystem mounted <code>--read-only</code>.</p>
+          </div>
+          <div class="feature-card">
+            <h4>🛡️ 2. Secret & Host Hygiene</h4>
+            <p>Zero API keys, cloud tokens, or host files ever cross the container boundary. The Docker socket is never mounted. The container exists solely to browse and report.</p>
+          </div>
+          <div class="feature-card">
+            <h4>⚡ 3. Hard Cgroup Resource Bounds</h4>
+            <p>Strict resource clamps: <code>--cpus=1</code>, <code>--memory=1g</code>, <code>--pids-limit=256</code>. Hard 45-second wall-clock orchestrator kill switch stops runaway loops or crypto miners.</p>
+          </div>
+          <div class="feature-card">
+            <h4>🔥 4. Total Ephemerality</h4>
+            <p>Every sandbox container is immediately destroyed after telemetry extraction via <code>--rm</code> and finally blocks. Guaranteed zero persistence: <em>"Phish fried. Sandbox destroyed."</em></p>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <div class="footer-left"><span>Kernel-level Enforcement</span></div>
+        <div><span class="footer-highlight">Blast Radius Zero</span></div>
+      </div>
+      <div class="notes-data" style="display:none;">
+        "The answer is Blast Radius Zero. Phish&Chips treats every URL as hostile. When a link is submitted, our FastAPI control plane on a hardened Vultr Cloud Compute VM spins up an isolated, unprivileged Playwright container on a custom 'phishnet' bridge. The sandbox is completely walled off by kernel iptables rules: it cannot touch the host, internal private subnets, or cloud metadata. Once evidence is gathered, the container is destroyed instantly."
+      </div>
+    </div>
+
+    <!-- SLIDE 4: Architecture -->
+    <div class="slide" data-slide="4">
+      <div class="slide-header">
+        <div class="slide-tag">Deployment & Architecture</div>
+        <h2 class="slide-title">Orchestration Architecture on Vultr</h2>
+        <p class="slide-subtitle">Central Control Plane, Isolated Network Cage, and Serverless AI Reasoning.</p>
+      </div>
+      <div class="slide-content">
+        <pre class="code-block">
+┌───────────────────────┐   HTTPS / TLS 1.3   ┌────────────────────────────────┐
+│      User Client      │ ──────────────────> │      Caddy Reverse Proxy       │
+└───────────────────────┘                     └───────────────┬────────────────┘
+                                                              │
+                                                              ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    VULTR CLOUD COMPUTE VM (Bangalore)                        │
+│   FastAPI Control Plane (Port 8000)                                          │
+│   ├── Input Validation & SSRF Guard (Blocks local/private IPs)               │
+│   ├── SSE Real-time Event Broadcaster (/api/scan/{job_id}/stream)            │
+│   ├── REA Static Reverse-Engineering Engine (DOM scripts, wasm, binaries)    │
+│                                                                              │
+│   ┌──────────────────────────────────────────────────────────────────────┐   │
+│   │ Network Perimeter: phishnet (172.30.0.0/16)                          │   │
+│   │ iptables: Host Bridge Gateway DROPPED · Private 10/192 DROPPED       │   │
+│   │                                                                      │   │
+│   │   Ephemeral Sandbox Container (phishchips-sandbox)                   │   │
+│   │   ├── User: runner (UID 10001) | --cap-drop=ALL | --read-only        │   │
+│   │   ├── Headless Chromium + Stealth Driver                             │   │
+│   │   └── Automatic Drive-By Malware Interceptor & File Quencher         │   │
+│   └──────────────────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────┬───────────────────────────────────────┘
+                                       │ JSON Telemetry + Screenshots
+                                       ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│            VULTR SERVERLESS INFERENCE (api.vultrinference.com/v1)            │
+│           Flagship GLM-5.3 Deep Reasoning + Strict Pydantic Schema           │
+└──────────────────────────────────────────────────────────────────────────────┘
+        </pre>
+      </div>
+      <div class="slide-footer">
+        <div class="footer-left"><span>Vultr Control Plane + Isolated phishnet</span></div>
+        <div><span class="footer-highlight">System Architecture</span></div>
+      </div>
+      <div class="notes-data" style="display:none;">
+        "Here is our full architecture. At the perimeter, Caddy handles automated TLS on 139.84.159.12.sslip.io. The FastAPI control plane validates the input, executes SSRF checks, and spins up the caged sandbox container. The container detonate the site, intercepts network requests, and collects forensic artifacts. That evidence is then sent directly to Vultr Serverless Inference running GLM-5.3 for deep reasoning, producing structured Pydantic verdicts with MITRE ATT&CK tactics."
+      </div>
+    </div>
+
+    <!-- SLIDE 5: Containment Moment -->
+    <div class="slide" data-slide="5">
+      <div class="slide-header">
+        <div class="slide-tag">Challenge 1 Requirement</div>
+        <h2 class="slide-title">The Containment Moment: Dual Boundary Proof</h2>
+        <p class="slide-subtitle">Verifiable proof of network isolation and drive-by malware neutralization.</p>
+      </div>
+      <div class="slide-content">
+        <div class="grid-2">
+          <div class="feature-card">
+            <h4>🌐 Moment 1: Network Boundary Drop</h4>
+            <p>From inside the container, iptables blocks all attempts to probe the host gateway (172.30.0.1:8000), internal subnets, or Vultr metadata (169.254.169.254).</p>
+            <pre class="code-block" style="font-size: 0.75rem; margin-top: 8px;">
+# scripts/verify_containment.sh
+Testing Gateway (172.30.0.1:8000) -> [PASS] BLOCKED
+Testing Metadata (169.254.169.254) -> [PASS] BLOCKED
+Testing Private 10.0.0.1          -> [PASS] BLOCKED
+🎉 Blast Radius Zero verified!</pre>
+          </div>
+          <div class="feature-card">
+            <h4>☣️ Moment 2: Drive-By Malware Interception</h4>
+            <p>When the target triggers an automated executable download (e.g. <code>SBI_Security_Patch.exe</code>), Playwright quenches the download stream instantly.</p>
+            <pre class="code-block" style="font-size: 0.75rem; margin-top: 8px;">
+[INTERCEPT] Download canceled.
+Payload: SBI_Mandatory_Security_Patch.exe
+SHA256: 48f95c5240be6d841e2be6d2a71d7...
+Entropy: 7.82 (High - Packed Executable)
+Execution: 0 instructions run. QUARANTINED.</pre>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <div class="footer-left"><span>Automated Containment Verification</span></div>
+        <div><span class="footer-highlight">Challenge 1 Proof</span></div>
+      </div>
+      <div class="notes-data" style="display:none;">
+        "For Challenge 1, we demonstrate our dual Containment Moment. First, our automated verification script proves that any network request from the sandbox to the host gateway, private subnets, or Vultr metadata is immediately dropped at the kernel level by iptables. Second, when a phishing site triggers an automated malware download — such as a fake SBI banking security patch — our browser interceptor traps the file instantly. The executable is quarantined, hashed, and disassembled by our REA engine without a single instruction ever executing on the host."
+      </div>
+    </div>
+
+    <!-- SLIDE 6: Pattern B -->
+    <div class="slide" data-slide="6">
+      <div class="slide-header">
+        <div class="slide-tag">Autonomous Agent Capabilities</div>
+        <h2 class="slide-title">Pattern B Decoy Pass & REA Engine</h2>
+        <p class="slide-subtitle">Active credential discovery and static binary/script reverse engineering.</p>
+      </div>
+      <div class="slide-content">
+        <div class="grid-2">
+          <div class="feature-card" style="border-top: 3px solid var(--accent-amber);">
+            <h4>👤 Pattern B: Human Approval Gate</h4>
+            <p><strong>Pass 1: Passive Recon.</strong> The agent identifies password and OTP forms without touching them. The orchestrator pauses and alerts the human operator.</p>
+            <p style="margin-top: 8px;"><strong>Pass 2: Synthetic Decoy Submission.</strong> Upon human approval, unprivileged Playwright submits fake canary data (<code>test_canary_user@example.com</code>) to uncover exfiltration endpoints.</p>
+          </div>
+          <div class="feature-card" style="border-top: 3px solid var(--accent-blue);">
+            <h4>🔍 Reverse Engineering Anything (REA) Engine</h4>
+            <p><strong>Static Inspection:</strong> Scans all inline and external JavaScript, WebAssembly routines, and binary drops. Computes Shannon entropy, extracts IOC strings, and maps tactics to MITRE ATT&CK:</p>
+            <p style="font-family: var(--font-mono); font-size: 0.85rem; color: #93c5fd; margin-top: 6px;">
+              • T1056: Input Capture<br>
+              • T1071: Exfiltration Over C2<br>
+              • T1204: Malicious File Quarantine
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <div class="footer-left"><span>Interactive Human Gate + Static Analysis</span></div>
+        <div><span class="footer-highlight">Advanced Agent Features</span></div>
+      </div>
+      <div class="notes-data" style="display:none;">
+        "Phish&Chips implements the hackathon's required Pattern B workflow. In Pass 1, the agent navigates passively. When it spots a credential harvesting form, it stops and requests human authorization. If approved, Pass 2 fires: the agent submits synthetic decoy credentials to observe where the data exfiltrates, capturing post-submit redirection and server-side behavior. Furthermore, our Tranco Top-10K reputation fast-path ensures that benign sites like Wikipedia are classified in seconds with zero false positives."
+      </div>
+    </div>
+
+    <!-- SLIDE 7: Real World Impact -->
+    <div class="slide" data-slide="7">
+      <div class="slide-header">
+        <div class="slide-tag">Real World Impact & Remediation</div>
+        <h2 class="slide-title">From Detection to Remediation in Seconds</h2>
+        <p class="slide-subtitle">Zero false positives, 1-click legal evidence lockers, and emergency escalation.</p>
+      </div>
+      <div class="slide-content">
+        <div class="grid-3">
+          <div class="feature-card">
+            <h4>📦 1-Click Abuse Takedown</h4>
+            <p>Auto-generates signed <code>.tar.gz</code> Evidence Lockers with screenshots, HAR recordings, and registrar abuse templates for fast domain suspension.</p>
+          </div>
+          <div class="feature-card">
+            <h4>🇮🇳 Regional Localization</h4>
+            <p>Full native interface in <strong>English, हिन्दी, and ಕನ್ನಡ</strong>. Protects non-technical citizens targeted by UPI refund and fake electricity bill fraud.</p>
+          </div>
+          <div class="feature-card">
+            <h4>🚨 Emergency Escalation</h4>
+            <p>Direct 1-tap dialer for India's <strong>National Cybercrime Helpline (1930)</strong> and instant reporting to <code>cybercrime.gov.in</code>.</p>
+          </div>
+        </div>
+        <div class="feature-card" style="border-left: 4px solid var(--accent-green);">
+          <h4>⚡ Zero False-Positive Reputation Fast-Path</h4>
+          <p>Tranco Top-10K verified apex domains (e.g. Wikipedia, Gov portals) complete within 5 seconds with guaranteed <code>SAFE</code> verdicts, eliminating AI hallucination and saving inference compute.</p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <div class="footer-left"><span>Production Metrics: /metrics & /api/health</span></div>
+        <div><span class="footer-highlight">Business Value & Impact</span></div>
+      </div>
+      <div class="notes-data" style="display:none;">
+        "Detection is only half the battle. Phish&Chips provides immediate remediation: a 1-click Abuse Takedown pack that SOC analysts can send to domain registrars, and a localized emergency drawer for Indian users featuring the 1930 National Cybercrime Helpline. It's trilingual, fully observable via Prometheus metrics, and ready for production deployment."
+      </div>
+    </div>
+
+    <!-- SLIDE 8: Conclusion -->
+    <div class="slide" data-slide="8">
+      <div class="slide-header">
+        <div class="slide-tag">Hackathon Submission Summary</div>
+        <h2 class="slide-title">Why Phish&Chips Wins the Agent Rush</h2>
+        <p class="slide-subtitle">Excellence across all four LabLab judging criteria.</p>
+      </div>
+      <div class="slide-content">
+        <div class="grid-2">
+          <div class="feature-card">
+            <h4>⚙️ Application of Technology</h4>
+            <p>Hardened Vultr Cloud Compute VM, Vultr Serverless Inference (GLM-5.3), Docker cgroups v2, Caddy automated TLS, and Prometheus observability.</p>
+          </div>
+          <div class="feature-card">
+            <h4>🎨 Presentation & UX</h4>
+            <p>Production dashboard with animated 4-stage pipeline graph, live streaming SSE containment logs, visual screenshot timeline, and REA disassembler.</p>
+          </div>
+          <div class="feature-card">
+            <h4>💼 Business & Social Value</h4>
+            <p>Safely handles hostile links for SOC teams and frontline consumers. Direct takedown generation and localized cybercrime reporting.</p>
+          </div>
+          <div class="feature-card">
+            <h4>✨ Originality</h4>
+            <p>Blast Radius Zero containment architecture + Pattern B Decoy Pass + Static REA Engine for WebAssembly & executables.</p>
+          </div>
+        </div>
+        <div class="feature-card" style="margin-top: 12px; text-align: center; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">
+          <h3 style="color: #f87171; font-family: var(--font-mono);">🍟 Phish fried. Sandbox destroyed.</h3>
+          <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 4px;">Experience it live right now at <strong>https://139.84.159.12.sslip.io</strong></p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <div class="footer-left"><span>Team alphax · Thank you Vultr & LabLab!</span></div>
+        <div><span class="footer-highlight">https://139.84.159.12.sslip.io</span></div>
+      </div>
+      <div class="notes-data" style="display:none;">
+        "Phish&Chips proves that autonomous AI agents can handle hazardous security tasks safely and effectively when built on solid cloud infrastructure. Thank you to Vultr and LabLab for this incredible challenge. Remember: fresh phish, fried in a sandbox. Thank you!"
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Speaker Notes Drawer -->
+  <div class="notes-drawer" id="notesDrawer">
+    <div class="notes-header">
+      <span>SPEAKER NOTES (Press 'N' to close)</span>
+      <button class="btn" onclick="toggleNotes()" style="padding: 2px 8px; font-size: 0.75rem;">✕ Close</button>
+    </div>
+    <div class="notes-text" id="notesText"></div>
+  </div>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 8;
+
+    function updateSlide() {
+      document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+      const activeSlide = document.querySelector(`.slide[data-slide="${currentSlide}"]`);
+      if (activeSlide) {
+        activeSlide.classList.add('active');
+        const notes = activeSlide.querySelector('.notes-data');
+        document.getElementById('notesText').innerText = notes ? notes.innerText.trim() : 'No notes for this slide.';
+      }
+      document.getElementById('slideCounter').innerText = `Slide ${currentSlide} / ${totalSlides}`;
+      document.getElementById('progressBar').style.width = `${(currentSlide / totalSlides) * 100}%`;
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        currentSlide++;
+        updateSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        currentSlide--;
+        updateSlide();
+      }
+    }
+
+    function toggleNotes() {
+      document.getElementById('notesDrawer').classList.toggle('open');
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key.toLowerCase() === 'n') {
+        toggleNotes();
+      }
+    });
+
+    updateSlide();
+  </script>
+</body>
+</html>
