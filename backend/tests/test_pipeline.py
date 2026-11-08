@@ -232,3 +232,33 @@ async def test_no_key_demo_bank_is_malicious_via_heuristics(tmp_path):
     t = cred_form(telemetry("demo://fake-bank", "file:///app/demo/bank_login.html", "SBI Online Banking", "State Bank of India login"), "https://evil.example.top/post")
     res = await run(t, None, tmp_path)
     assert res["engine"] in ("heuristics-only",) and res["verdict_class"] in ("suspicious", "malicious")
+
+
+async def test_sync_chat_reasoning_fallback(monkeypatch):
+    class FakeMessage:
+        content = ""
+        reasoning = 'Thinking...\nBased on the evidence:\n{"verdict": "benign", "confidence": 0.85, "indicators": ["genuine"], "evidence_chain": ["c1"]}'
+
+    class FakeChoice:
+        message = FakeMessage()
+
+    class FakeResponse:
+        choices = [FakeChoice()]
+
+    class FakeCompletions:
+        def create(self, **kwargs):
+            return FakeResponse()
+
+    class FakeChat:
+        completions = FakeCompletions()
+
+    class FakeClient:
+        chat = FakeChat()
+
+    monkeypatch.setattr("openai.OpenAI", lambda **kwargs: FakeClient())
+    config = {"base_url": "https://api.vultr.com/v1", "api_key": "fake", "model": "glm-5.3"}
+    res = analyzer._sync_chat([{"role": "user", "content": "hi"}], 10.0, config)
+    parsed = json.loads(res)
+    assert parsed["verdict"] == "benign"
+    assert parsed["confidence"] == 0.85
+
