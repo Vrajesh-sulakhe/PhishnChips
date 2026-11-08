@@ -389,9 +389,9 @@ class ScriptInspector:
         ],
         "Exfiltration & Beaconing": [
             r"\bnavigator\.sendBeacon\s*\(",
-            r"new\s+XMLHttpRequest\s*\(",
-            r"\bfetch\s*\(",
-            r"new\s+Image\(\)\.src\s*=",
+            r"new\s+XMLHttpRequest\s*\(.*(?:\?|&)data=",
+            r"\bfetch\s*\([^)]*(?:password|token|creds|steal|leak)",
+            r"new\s+Image\(\)\.src\s*=\s*.*(?:\?|&)data=",
             r"new\s+WebSocket\s*\(",
         ],
     }
@@ -583,13 +583,13 @@ def analyze_target_artifacts(job_dir: Path) -> Dict[str, Any]:
     s_caps = script_report.get("capabilities", [])
     if script_report.get("is_packed"):
         mitre_set.add("T1027: Obfuscated/Packed Script")
-    if any("Dynamic" in c for c in s_caps):
+    if any("Dynamic" in c for c in s_caps) and script_report.get("is_suspicious"):
         mitre_set.add("T1059.007: JavaScript Engine Execution")
     if any("Credential" in c for c in s_caps):
         mitre_set.add("T1056: Input Capture")
     if any("Anti-Analysis" in c for c in s_caps):
         mitre_set.add("T1497: Virtualization/Sandbox Evasion")
-    if any("Exfiltration" in c for c in s_caps):
+    if any("Exfiltration" in c for c in s_caps) and script_report.get("is_suspicious"):
         mitre_set.add("T1071: Exfiltration Over C2")
 
     script_sha = hashlib.sha256(script_report.get("preview", "").encode()).hexdigest()[:32]
@@ -612,7 +612,7 @@ def analyze_target_artifacts(job_dir: Path) -> Dict[str, Any]:
         risk_level = "CRITICAL"
     elif script_report.get("is_suspicious") or has_dropped:
         risk_level = "HIGH"
-    elif script_report.get("capabilities"):
+    elif script_report.get("is_packed"):
         risk_level = "MEDIUM"
 
     summary_parts = []
