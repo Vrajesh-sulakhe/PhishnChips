@@ -161,6 +161,8 @@ def init_db():
             conn.execute("ALTER TABLE scans ADD COLUMN evidence_chain_json TEXT;")
         if "c2_intelligence_json" not in scan_cols:
             conn.execute("ALTER TABLE scans ADD COLUMN c2_intelligence_json TEXT;")
+        if "re_intelligence_json" not in scan_cols:
+            conn.execute("ALTER TABLE scans ADD COLUMN re_intelligence_json TEXT;")
 
         # Self-healing migration: heal any legacy false-positive records created before reputation gate was deployed
         conn.execute("""
@@ -460,6 +462,7 @@ def save_scan(
     verdict_class: Optional[str] = None,
     evidence_chain: Optional[List[str]] = None,
     c2_intelligence: Optional[Dict[str, Any]] = None,
+    re_intelligence: Optional[Dict[str, Any]] = None,
 ):
     """Persists or updates scan telemetry and verdict in database."""
     now = datetime.now(timezone.utc).isoformat()
@@ -469,8 +472,8 @@ def save_scan(
                 job_id, user_id, target_url, status, verdict, confidence,
                 threat_source, screenshots_json, reasons_json, asks_for_json,
                 pretending_to_be, threat_type, verdict_class, evidence_chain_json,
-                c2_intelligence_json, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                c2_intelligence_json, re_intelligence_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(job_id) DO UPDATE SET
                 user_id = COALESCE(excluded.user_id, scans.user_id),
                 status = excluded.status,
@@ -484,7 +487,8 @@ def save_scan(
                 threat_type = excluded.threat_type,
                 verdict_class = excluded.verdict_class,
                 evidence_chain_json = excluded.evidence_chain_json,
-                c2_intelligence_json = COALESCE(excluded.c2_intelligence_json, scans.c2_intelligence_json)
+                c2_intelligence_json = COALESCE(excluded.c2_intelligence_json, scans.c2_intelligence_json),
+                re_intelligence_json = COALESCE(excluded.re_intelligence_json, scans.re_intelligence_json)
         """, (
             job_id,
             user_id,
@@ -501,6 +505,7 @@ def save_scan(
             verdict_class,
             json.dumps(evidence_chain or []),
             json.dumps(c2_intelligence or {}) if c2_intelligence is not None else None,
+            json.dumps(re_intelligence or {}) if re_intelligence is not None else None,
             now
         ))
         conn.commit()
@@ -523,6 +528,7 @@ def get_recent_scans(limit: int = 15) -> List[Dict[str, Any]]:
             d["asks_for"] = json.loads(d.get("asks_for_json") or "[]")
             d["evidence_chain"] = json.loads(d.get("evidence_chain_json") or "[]")
             d["c2_intelligence"] = json.loads(d.get("c2_intelligence_json") or "{}")
+            d["re_intelligence"] = json.loads(d.get("re_intelligence_json") or "{}")
             if not d.get("verdict_class"):
                 v = (d.get("verdict") or "").upper()
                 d["verdict_class"] = "malicious" if v in ("SCAM", "MALICIOUS") else ("benign" if v in ("SAFE", "BENIGN") else "suspicious")
@@ -548,6 +554,7 @@ def get_user_scans(user_id: str, limit: int = 25) -> List[Dict[str, Any]]:
             d["asks_for"] = json.loads(d.get("asks_for_json") or "[]")
             d["evidence_chain"] = json.loads(d.get("evidence_chain_json") or "[]")
             d["c2_intelligence"] = json.loads(d.get("c2_intelligence_json") or "{}")
+            d["re_intelligence"] = json.loads(d.get("re_intelligence_json") or "{}")
             if not d.get("verdict_class"):
                 v = (d.get("verdict") or "").upper()
                 d["verdict_class"] = "malicious" if v in ("SCAM", "MALICIOUS") else ("benign" if v in ("SAFE", "BENIGN") else "suspicious")
@@ -568,6 +575,7 @@ def get_scan_by_id(job_id: str) -> Optional[Dict[str, Any]]:
         d["asks_for"] = json.loads(d.get("asks_for_json") or "[]")
         d["evidence_chain"] = json.loads(d.get("evidence_chain_json") or "[]")
         d["c2_intelligence"] = json.loads(d.get("c2_intelligence_json") or "{}")
+        d["re_intelligence"] = json.loads(d.get("re_intelligence_json") or "{}")
         if not d.get("verdict_class"):
             v = (d.get("verdict") or "").upper()
             d["verdict_class"] = "malicious" if v in ("SCAM", "MALICIOUS") else ("benign" if v in ("SAFE", "BENIGN") else "suspicious")

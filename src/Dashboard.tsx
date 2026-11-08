@@ -177,6 +177,27 @@ export type ScanRecord = {
     }>;
     attribution_summary?: string;
   };
+  re_intelligence?: {
+    has_disassembly: boolean;
+    attribution_summary?: string;
+    mitre_tactics?: string[];
+    artifacts?: Array<{
+      name: string;
+      type: "pe" | "wasm";
+      sha256: string;
+      size_bytes: number;
+      entropy: number;
+      is_packed: boolean;
+      format?: string;
+      sections?: Array<{ name: string; virtual_size: number; raw_size: number; entropy: number }>;
+      suspicious_apis?: string[];
+      capabilities?: string[];
+      ioc_strings?: string[];
+      wat_preview?: string;
+      exports?: string[];
+      imports?: Array<{ module: string; field: string }>;
+    }>;
+  };
 };
 
 /** Single source of truth for verdict interpretation. Only an explicit malicious verdict is "malicious":
@@ -331,6 +352,7 @@ export default function Dashboard({
             asks_for: s.asks_for || [],
             threat_source: s.threat_source || "",
             c2_intelligence: s.c2_intelligence,
+            re_intelligence: s.re_intelligence,
           };
         });
         setRecords(mapped);
@@ -404,6 +426,7 @@ export default function Dashboard({
       asks_for: result.asks_for || (raw.fields?.password ? ["Password", "OTP / Security PIN"] : []),
       threat_source: result.threat_source || "Vultr Serverless Inference",
       c2_intelligence: data.c2_intelligence || raw.c2_intelligence,
+      re_intelligence: data.re_intelligence || raw.re_intelligence,
     };
 
     setRecords((prev) => [record, ...prev.filter((r) => r.id !== record.id)]);
@@ -997,7 +1020,9 @@ export default function Dashboard({
                           {threatLabel(record)}
                         </span>
                         <span className="cell-subtitle">
-                          {record.c2_intelligence?.has_c2_exfiltration
+                          {record.re_intelligence?.has_disassembly
+                            ? `🔬 Dissected: ${record.re_intelligence.artifacts?.[0]?.name || "Binary/WASM"}`
+                            : record.c2_intelligence?.has_c2_exfiltration
                             ? `🎯 C2: ${record.c2_intelligence.drop_destinations?.[0]?.channel_type || "Drop"} vector`
                             : record.malicious ? record.brand : "Caged detonation"}
                         </span>
@@ -1309,6 +1334,231 @@ export default function Dashboard({
                         >
                           <span>DROP: {d.channel_type.toUpperCase()} ({d.identifier})</span>
                           <span style={{ color: "#ef4444", fontWeight: 700 }}>{d.risk_rating} RISK</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {selected.re_intelligence?.has_disassembly && (
+                    <div
+                      style={{
+                        margin: "14px 0",
+                        padding: "14px 16px",
+                        background: "rgba(139, 92, 246, 0.08)",
+                        border: "1px solid rgba(139, 92, 246, 0.35)",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: "8px",
+                          marginBottom: "10px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            color: "#c084fc",
+                            fontWeight: 700,
+                            fontSize: "12px",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
+                          }}
+                        >
+                          <Icon name="terminal" size={16} />
+                          <span>Pure Static Reverse Engineering & Disassembly (Blast Radius Zero)</span>
+                        </div>
+                        <span
+                          style={{
+                            fontSize: "10px",
+                            fontFamily: "var(--mono)",
+                            padding: "2px 8px",
+                            borderRadius: "4px",
+                            background: "rgba(139, 92, 246, 0.2)",
+                            color: "#d8b4fe",
+                            border: "1px solid rgba(139, 92, 246, 0.4)",
+                          }}
+                        >
+                          {selected.re_intelligence.artifacts?.length || 0} Quarantined Artifact(s)
+                        </span>
+                      </div>
+
+                      <p style={{ margin: "4px 0 10px", fontSize: "12px", color: "#e2e8f0" }}>
+                        {selected.re_intelligence.attribution_summary}
+                      </p>
+
+                      {selected.re_intelligence.mitre_tactics && selected.re_intelligence.mitre_tactics.length > 0 && (
+                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "12px" }}>
+                          {selected.re_intelligence.mitre_tactics.map((t, idx) => (
+                            <span
+                              key={idx}
+                              style={{
+                                fontSize: "10px",
+                                fontFamily: "var(--mono)",
+                                padding: "2px 6px",
+                                borderRadius: "3px",
+                                background: "rgba(239, 68, 68, 0.15)",
+                                color: "#fca5a5",
+                                border: "1px solid rgba(239, 68, 68, 0.3)",
+                              }}
+                            >
+                              MITRE: {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {selected.re_intelligence.artifacts?.map((art, aIdx) => (
+                        <div
+                          key={aIdx}
+                          style={{
+                            background: "rgba(15, 23, 42, 0.7)",
+                            border: "1px solid rgba(255, 255, 255, 0.08)",
+                            borderRadius: "6px",
+                            padding: "10px 12px",
+                            marginBottom: "10px",
+                            fontSize: "11px",
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                            <div>
+                              <strong style={{ color: "#f1f5f9", fontSize: "12px" }}>{art.name}</strong>
+                              <span style={{ marginLeft: "8px", color: "#94a3b8", fontFamily: "var(--mono)" }}>
+                                ({art.type.toUpperCase()} • {Math.round(art.size_bytes / 1024 * 10) / 10} KB)
+                              </span>
+                            </div>
+                            <span
+                              style={{
+                                padding: "2px 6px",
+                                borderRadius: "3px",
+                                fontSize: "10px",
+                                fontWeight: 700,
+                                background: art.is_packed ? "rgba(239, 68, 68, 0.25)" : "rgba(34, 197, 94, 0.15)",
+                                color: art.is_packed ? "#f87171" : "#4ade80",
+                                border: `1px solid ${art.is_packed ? "rgba(239, 68, 68, 0.5)" : "rgba(34, 197, 94, 0.3)"}`,
+                              }}
+                            >
+                              {art.is_packed ? "PACKED / CRYPTED" : "UNPACKED"}
+                            </span>
+                          </div>
+
+                          {/* Entropy Meter */}
+                          <div style={{ marginBottom: "8px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#94a3b8", marginBottom: "2px" }}>
+                              <span>Shannon Entropy: <strong style={{ color: art.entropy > 7.0 ? "#ef4444" : art.entropy > 6.0 ? "#f59e0b" : "#10b981" }}>{art.entropy.toFixed(2)}</strong> / 8.0</span>
+                              <span>{art.entropy > 7.0 ? "High Randomness (Encrypted/Packed)" : "Normal Distribution"}</span>
+                            </div>
+                            <div style={{ width: "100%", height: "6px", background: "rgba(255,255,255,0.1)", borderRadius: "3px", overflow: "hidden" }}>
+                              <div
+                                style={{
+                                  width: `${Math.min(100, (art.entropy / 8.0) * 100)}%`,
+                                  height: "100%",
+                                  background: art.entropy > 7.0 ? "linear-gradient(90deg, #f59e0b, #ef4444)" : "linear-gradient(90deg, #10b981, #3b82f6)",
+                                  borderRadius: "3px",
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Suspicious APIs / Capabilities */}
+                          {art.capabilities && art.capabilities.length > 0 && (
+                            <div style={{ marginTop: "6px" }}>
+                              <span style={{ color: "#94a3b8", fontSize: "10px" }}>Capabilities: </span>
+                              {art.capabilities.map((cap, cIdx) => (
+                                <span
+                                  key={cIdx}
+                                  style={{
+                                    display: "inline-block",
+                                    fontSize: "10px",
+                                    fontFamily: "var(--mono)",
+                                    padding: "1px 5px",
+                                    borderRadius: "3px",
+                                    background: "rgba(244, 63, 94, 0.15)",
+                                    color: "#fda4af",
+                                    marginRight: "4px",
+                                    marginBottom: "4px",
+                                    border: "1px solid rgba(244, 63, 94, 0.3)",
+                                  }}
+                                >
+                                  {cap.replace(/_/g, " ")}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {art.suspicious_apis && art.suspicious_apis.length > 0 && (
+                            <div style={{ marginTop: "4px" }}>
+                              <span style={{ color: "#94a3b8", fontSize: "10px" }}>IAT APIs: </span>
+                              {art.suspicious_apis.map((api, apiIdx) => (
+                                <code
+                                  key={apiIdx}
+                                  style={{
+                                    fontSize: "10px",
+                                    color: "#fbbf24",
+                                    background: "rgba(0,0,0,0.4)",
+                                    padding: "1px 4px",
+                                    borderRadius: "3px",
+                                    marginRight: "4px",
+                                  }}
+                                >
+                                  {api}
+                                </code>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* WAT Preview for WASM */}
+                          {art.type === "wasm" && art.wat_preview && (
+                            <details style={{ marginTop: "8px" }}>
+                              <summary style={{ cursor: "pointer", color: "#a78bfa", fontSize: "10px", fontWeight: 600 }}>
+                                View Disassembled WebAssembly Text (WAT)
+                              </summary>
+                              <pre
+                                style={{
+                                  marginTop: "6px",
+                                  padding: "8px 10px",
+                                  background: "#090d16",
+                                  border: "1px solid rgba(139, 92, 246, 0.3)",
+                                  borderRadius: "4px",
+                                  fontSize: "10px",
+                                  fontFamily: "var(--mono)",
+                                  color: "#cbd5e1",
+                                  maxHeight: "160px",
+                                  overflowY: "auto",
+                                  whiteSpace: "pre",
+                                }}
+                              >
+                                {art.wat_preview}
+                              </pre>
+                            </details>
+                          )}
+
+                          {/* Extracted IOCs */}
+                          {art.ioc_strings && art.ioc_strings.length > 0 && (
+                            <div style={{ marginTop: "6px" }}>
+                              <span style={{ color: "#94a3b8", fontSize: "10px" }}>Extracted IOCs: </span>
+                              {art.ioc_strings.map((ioc, iocIdx) => (
+                                <code
+                                  key={iocIdx}
+                                  style={{
+                                    fontSize: "10px",
+                                    color: "#38bdf8",
+                                    background: "rgba(0,0,0,0.4)",
+                                    padding: "1px 4px",
+                                    borderRadius: "3px",
+                                    marginRight: "4px",
+                                  }}
+                                >
+                                  {ioc}
+                                </code>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

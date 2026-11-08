@@ -520,6 +520,7 @@ async def get_scan_status(job_id: str):
                 "evidence_chain": db_scan.get("evidence_chain", [])
             },
             "c2_intelligence": db_scan.get("c2_intelligence") or {"has_c2_exfiltration": False, "drop_destinations": []},
+            "re_intelligence": db_scan.get("re_intelligence") or {"has_disassembly": False, "artifacts": []},
             "forensic_manifest": None,
             "raw_telemetry": None,
             "error": None
@@ -535,6 +536,7 @@ async def get_scan_status(job_id: str):
         "screenshots": job.get("screenshots", []),
         "result": job.get("verdict"),
         "c2_intelligence": job.get("c2_intelligence") or {"has_c2_exfiltration": False, "drop_destinations": []},
+        "re_intelligence": job.get("re_intelligence") or {"has_disassembly": False, "artifacts": []},
         "forensic_manifest": job.get("forensic_manifest"),
         "raw_telemetry": job.get("raw_result"),
         "error": job.get("error")
@@ -569,11 +571,13 @@ async def generate_takedown_endpoint(job_id: str):
     target_url = None
     verdict_info = None
     c2_intel = None
+    re_intel = None
 
     if job:
         target_url = job.get("target_url")
         verdict_info = job.get("verdict")
         c2_intel = job.get("c2_intelligence")
+        re_intel = job.get("re_intelligence")
     else:
         db_scan = db.get_scan_by_id(job_id)
         if db_scan:
@@ -588,6 +592,7 @@ async def generate_takedown_endpoint(job_id: str):
                 "verdict_class": db_scan.get("verdict_class")
             }
             c2_intel = db_scan.get("c2_intelligence")
+            re_intel = db_scan.get("re_intelligence")
 
     if not target_url or not verdict_info:
         raise HTTPException(status_code=404, detail=f"Investigation record for '{job_id}' not found.")
@@ -598,11 +603,25 @@ async def generate_takedown_endpoint(job_id: str):
         "pretending_to_be": verdict_info.get("pretending_to_be") if isinstance(verdict_info, dict) else None,
         "reasons": verdict_info.get("reasons", []) if isinstance(verdict_info, dict) else [],
         "confidence": verdict_info.get("confidence", 0.95) if isinstance(verdict_info, dict) else 0.95,
-        "c2_intelligence": c2_intel or {}
+        "c2_intelligence": c2_intel or {},
+        "re_intelligence": re_intel or {}
     }
 
     takedown_pkg = takedown.generate_takedown_package(scan_data)
     return takedown_pkg
+
+@app.get("/api/scan/{job_id}/re-intelligence")
+async def get_scan_re_intelligence(job_id: str):
+    """Returns static reverse-engineering and disassembly metadata for quarantined binaries and WASM."""
+    job = scanner.get_job(job_id)
+    if job and job.get("re_intelligence"):
+        return {"job_id": job_id, "re_intelligence": job.get("re_intelligence")}
+    
+    db_scan = db.get_scan_by_id(job_id)
+    if db_scan and db_scan.get("re_intelligence"):
+        return {"job_id": job_id, "re_intelligence": db_scan.get("re_intelligence")}
+        
+    return {"job_id": job_id, "re_intelligence": {"has_disassembly": False, "artifacts": []}}
 
 @app.post("/api/scan/{job_id}/approve")
 async def approve_scan_action(job_id: str, body: ApprovalRequest):

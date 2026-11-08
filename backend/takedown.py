@@ -23,6 +23,8 @@ def generate_takedown_package(scan_data: Dict[str, Any]) -> Dict[str, Any]:
 
     c2_info = scan_data.get("c2_intelligence") or {}
     detected_drops = c2_info.get("detected_drops") or []
+    re_info = scan_data.get("re_intelligence") or {}
+    re_artifacts = re_info.get("artifacts") or []
     pretending_to_be = scan_data.get("pretending_to_be") or "Legitimate Organization / Financial Institution"
     reasons = scan_data.get("reasons") or []
     confidence_pct = int((scan_data.get("confidence") or 0.95) * 100)
@@ -53,6 +55,13 @@ def generate_takedown_package(scan_data: Dict[str, Any]) -> Dict[str, Any]:
             f" - {d.get('title')}: {d.get('details')} (Target: {d.get('destination')})" for d in detected_drops
         )
 
+    re_evidence_lines = ""
+    if re_artifacts:
+        re_evidence_lines = "\n[REVERSE-ENGINEERED MALWARE & EVASION ARTIFACTS]:\n" + "\n".join(
+            f" - {a.get('name')} (Type: {a.get('type')}, SHA-256: {a.get('sha256')}, Entropy: {a.get('entropy')}, Packed: {a.get('is_packed')}, Capabilities: {', '.join(a.get('capabilities', []) or ['none'])})"
+            for a in re_artifacts
+        )
+
     reasons_bulleted = "\n".join(f" - {r}" for r in reasons) if reasons else " - Unauthorized credential harvesting form detected."
 
     abuse_letter_text = f"""Subject: [URGENT ABUSE NOTICE] Malicious Credential Harvesting Phishing Campaign on {domain}
@@ -69,6 +78,7 @@ We are writing to submit urgent forensic evidence regarding an active, verified 
 - Automated Forensics Confidence: {confidence_pct}%
 - Phish&Chips Investigation ID: {job_id}
 {c2_evidence_lines}
+{re_evidence_lines}
 
 [FORENSIC EVIDENCE]:
 {reasons_bulleted}
@@ -122,6 +132,31 @@ Support: security@phishchips.internal
             }
         ]
     }
+
+    # Add STIX File and Relationship objects for quarantined malware/wasm artifacts
+    for art in re_artifacts:
+        file_id = f"file--{uuid.uuid4()}"
+        stix_bundle["objects"].append({
+            "type": "file",
+            "id": file_id,
+            "spec_version": "2.1",
+            "name": art.get("name", "malware.bin"),
+            "hashes": {
+                "SHA-256": art.get("sha256", "")
+            },
+            "size": art.get("size_bytes", 0)
+        })
+        rel_id = f"relationship--{uuid.uuid4()}"
+        stix_bundle["objects"].append({
+            "type": "relationship",
+            "id": rel_id,
+            "spec_version": "2.1",
+            "created": timestamp_iso,
+            "modified": timestamp_iso,
+            "relationship_type": "drops",
+            "source_ref": malware_id,
+            "target_ref": file_id
+        })
 
     return {
         "domain": domain,

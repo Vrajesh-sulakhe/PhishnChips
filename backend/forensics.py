@@ -32,13 +32,14 @@ def generate_forensic_manifest(job_id: str, job_dir: Path) -> Dict[str, Any]:
     files_list: List[Dict[str, Any]] = []
     
     if job_dir.exists():
-        for p in sorted(job_dir.glob("*")):
-            if p.is_file() and p.name not in ("manifest.json", "evidence.tar.gz"):
+        for p in sorted(job_dir.rglob("*")):
+            if p.is_file() and p.name not in ("manifest.json", "evidence.tar.gz") and not p.name.endswith(".tar.gz"):
                 try:
+                    rel_path = str(p.relative_to(job_dir))
                     size = p.stat().st_size
                     sha = compute_file_sha256(p)
                     files_list.append({
-                        "name": p.name,
+                        "name": rel_path,
                         "size_bytes": size,
                         "sha256": sha
                     })
@@ -78,9 +79,10 @@ def build_forensic_tarball(job_id: str, job_dir: Path) -> bytes:
 
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
-        for p in sorted(job_dir.glob("*")):
+        for p in sorted(job_dir.rglob("*")):
             if p.is_file() and not p.name.endswith(".tar.gz"):
-                tar.add(p, arcname=f"DET-{job_id.upper()}/{p.name}")
+                rel_path = str(p.relative_to(job_dir))
+                tar.add(p, arcname=f"DET-{job_id.upper()}/{rel_path}")
 
     buf.seek(0)
     return buf.getvalue()

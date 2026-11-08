@@ -178,6 +178,22 @@ def build_evidence(result_data: Dict[str, Any], heuristics: Dict[str, Any], tier
         "iframes": result_data.get("iframes", [])[:10],
         "dom_mutations": result_data.get("dom_mutations", [])[:10],
         "blocked_events": result_data.get("blocked_events", [])[:10],
+        "reverse_engineering": {
+            "has_disassembly": (result_data.get("re_intelligence") or {}).get("has_disassembly", False),
+            "attribution_summary": (result_data.get("re_intelligence") or {}).get("attribution_summary", "None"),
+            "mitre_tactics": (result_data.get("re_intelligence") or {}).get("mitre_tactics", []),
+            "artifacts": [
+                {
+                    "name": a.get("name"),
+                    "type": a.get("type"),
+                    "entropy": a.get("entropy"),
+                    "is_packed": a.get("is_packed"),
+                    "suspicious_apis": a.get("suspicious_apis", [])[:5],
+                    "capabilities": a.get("capabilities", [])[:5],
+                }
+                for a in (result_data.get("re_intelligence") or {}).get("artifacts", [])[:5]
+            ]
+        },
         "heuristic_signals": {
             "hard": [s["indicator"] for s in heuristics.get("hard_signals", [])],
             "soft": [s["indicator"] for s in heuristics.get("soft_signals", [])],
@@ -212,7 +228,7 @@ def _threat_type(verdict: str, heuristics: Dict[str, Any], llm: Optional[ModelVe
     codes = {s["code"] for s in heuristics.get("hard_signals", [])}
     if codes & {"cross_origin_credential_form", "credential_exfil_request", "brand_mismatch_credentials", "injected_login_ui"}:
         return "credential_harvest"
-    if "auto_download" in codes:
+    if codes & {"auto_download", "wasm_evasion_module", "packed_binary_payload"}:
         return "malware_delivery"
     if "off_apex_redirect" in codes:
         return "open_redirect"

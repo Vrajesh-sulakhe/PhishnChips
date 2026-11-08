@@ -227,6 +227,19 @@ def evaluate_heuristics(result_data: Dict[str, Any]) -> Dict[str, Any]:
         add(hard, 55, "auto_download", "Malicious Delivery: Auto-download attempted",
             f"Attempted covert automatic file download inside sandbox: {downloads[0].get('detail', 'download')}")
 
+    # --- Reverse Engineering / Malware Payloads ---
+    wasm_artifacts = result_data.get("quarantined_wasm", [])
+    if wasm_artifacts and not (reputable_landing and reputable_origin):
+        add(hard, 65, "wasm_evasion_module", "Evasion Technique: Obfuscated WebAssembly runtime",
+            f"Detected and quarantined {len(wasm_artifacts)} in-browser WebAssembly evasion module(s).")
+
+    re_intel = result_data.get("re_intelligence") or {}
+    for art in re_intel.get("artifacts", []):
+        if art.get("is_packed"):
+            add(hard, 70, "packed_binary_payload", f"Malware Delivery: High-entropy packed executable ({art.get('name')})",
+                f"Binary entropy {art.get('entropy')} exceeds packed threshold; suspicious APIs: {', '.join(art.get('suspicious_apis', [])[:3])}")
+            break
+
     # --- Open redirect / landing hijack from a reputable origin ---
     if reputable_origin and final_apex and not same_site(requested_url, final_url) and not reputable_landing:
         add(hard, 70, "off_apex_redirect", f"Reputable origin redirected to unverified apex {final_apex}",

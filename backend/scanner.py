@@ -19,6 +19,7 @@ import metrics
 import db
 import c2_hunter
 import forensics
+import re_engine
 
 BASE_DIR = Path("/root/phish-n-chips")
 if not BASE_DIR.exists():
@@ -237,6 +238,18 @@ async def process_scan_job(job_id: str, url: str):
                 else:
                     log_event(job_id, "Decoy submission declined. Proceeding directly to threat synthesis.", stage="INFO")
 
+            # Run Static Reverse Engineering on any quarantined binaries & WASM
+            try:
+                re_intel = re_engine.analyze_quarantined_artifacts(job_dir)
+                job["re_intelligence"] = re_intel
+                if isinstance(job.get("raw_result"), dict):
+                    job["raw_result"]["re_intelligence"] = re_intel
+                if re_intel.get("has_disassembly"):
+                    log_event(job_id, f"🔬 Reverse Engineering: {re_intel.get('attribution_summary')}", stage="RE_INTEL")
+            except Exception as re_err:
+                print(f"Error in re_engine analysis: {re_err}")
+                job["re_intelligence"] = {"has_disassembly": False, "artifacts": []}
+
             # Phase 3: AI Analysis & Heuristics Synthesis
             job["status"] = "analyzing"
             log_event(job_id, "[VULTR INFERENCE] Dispatching forensic payload to Vultr Serverless Inference...", stage="INFERENCE_DISPATCH")
@@ -336,6 +349,7 @@ def _finish_job(job_id: str, url: str, job: Dict[str, Any], started: float) -> N
             verdict_class=verdict_data.get("verdict_class"),
             evidence_chain=verdict_data.get("evidence_chain", []),
             c2_intelligence=job.get("c2_intelligence"),
+            re_intelligence=job.get("re_intelligence"),
         )
     except Exception as dbe:
         print(f"Error persisting scan to DB: {dbe}")

@@ -10,14 +10,49 @@ import sys
 import json
 import time
 import re
+import hashlib
+import base64
 from urllib.parse import urlparse
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 TARGET_URL = os.getenv("TARGET_URL", "").strip()
 SUBMIT_PASS = os.getenv("SUBMIT_PASS", "0").lower() in ("1", "true", "yes")
 OUT_DIR = os.getenv("OUT_DIR", "/out")
+PAYLOADS_DIR = os.path.join(OUT_DIR, "payloads")
+WASM_DIR = os.path.join(OUT_DIR, "wasm")
+os.makedirs(PAYLOADS_DIR, exist_ok=True)
+os.makedirs(WASM_DIR, exist_ok=True)
 NAV_TIMEOUT_MS = int(os.getenv("NAV_TIMEOUT_MS", "10000"))   # hard cap for the main navigation
 SETTLE_MS = int(os.getenv("SETTLE_MS", "1500"))               # time for JS / delayed injections to run
+
+# In-memory WebAssembly evasion interception hook
+WASM_HOOK_JS = r"""
+(() => {
+  if (typeof WebAssembly !== "undefined") {
+    const origInstantiate = WebAssembly.instantiate;
+    window.__pc_wasm_modules = [];
+    WebAssembly.instantiate = function(bytes, importObject) {
+      try {
+        let u8 = null;
+        if (bytes instanceof ArrayBuffer) {
+          u8 = new Uint8Array(bytes);
+        } else if (ArrayBuffer.isView(bytes)) {
+          u8 = new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+        }
+        if (u8 && u8.length >= 8 && u8[0] === 0 && u8[1] === 0x61 && u8[2] === 0x73 && u8[3] === 0x6d) {
+          let binary = '';
+          const len = u8.byteLength;
+          for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(u8[i]);
+          }
+          window.__pc_wasm_modules.push(btoa(binary));
+        }
+      } catch (e) {}
+      return origInstantiate.apply(this, arguments);
+    };
+  }
+})();
+"""
 
 # Anti-evasion: equivalent of puppeteer-extra-plugin-stealth's core evasions, applied via
 # an init script so they run before any page script (cloaking kits probe these immediately).
@@ -108,6 +143,8 @@ result = {
     "submit_pass_executed": False,
     "post_submit_url": None,
     "exfiltration_channels": [],
+    "quarantined_payloads": [],
+    "quarantined_wasm": [],
     "stealth_applied": True,
     "error": None
 }
@@ -141,7 +178,7 @@ with sync_playwright() as p:
         context = browser.new_context(
             viewport={"width": 1280, "height": 800},
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-            accept_downloads=False,
+            accept_downloads=True,
             ignore_https_errors=True,
             locale="en-US",
             timezone_id="America/New_York",
@@ -149,17 +186,30 @@ with sync_playwright() as p:
         )
         context.add_init_script(STEALTH_JS)
         context.add_init_script(MUTATION_JS)
+        context.add_init_script(WASM_HOOK_JS)
 
         page = context.new_page()
 
-        # Listen for download attempts and intercept
+        # Listen for download attempts and quarantine
         def on_download(download):
-            msg = f"Automatic file download blocked: {download.suggested_filename} ({download.url})"
-            result["blocked_events"].append({"type": "download", "detail": msg})
+            clean_filename = re.sub(r'[^a-zA-Z0-9_.-]', '_', download.suggested_filename or "payload.bin")
+            save_path = os.path.join(PAYLOADS_DIR, clean_filename)
             try:
-                download.cancel()
-            except Exception:
-                pass
+                download.save_as(save_path)
+                with open(save_path, "rb") as f:
+                    content = f.read()
+                sha256 = hashlib.sha256(content).hexdigest()
+                size = len(content)
+                msg = f"Intercepted and quarantined dropped payload: {clean_filename} ({size} bytes, sha256:{sha256[:12]})"
+                result["quarantined_payloads"].append({
+                    "filename": clean_filename,
+                    "sha256": sha256,
+                    "size": size,
+                    "url": download.url
+                })
+            except Exception as dl_err:
+                msg = f"Automatic file download intercepted: {clean_filename} ({download.url}) [quarantine error: {dl_err}]"
+            result["blocked_events"].append({"type": "download", "detail": msg})
 
         page.on("download", on_download)
 
@@ -213,6 +263,29 @@ with sync_playwright() as p:
                 if loc:
                     redirect_chain.append(loc)
                     result["redirect_chain_detail"].append({"from": res.url[:300], "status": res.status, "to": loc[:300]})
+
+            # Trap WebAssembly network deliveries
+            try:
+                ct = (res.headers.get("content-type") or "").lower()
+                u_low = res.url.lower()
+                if "application/wasm" in ct or u_low.endswith(".wasm") or ".wasm?" in u_low:
+                    body = res.body()
+                    if body and len(body) >= 8 and body[:4] == b"\x00asm":
+                        wasm_hash = hashlib.sha256(body).hexdigest()
+                        wasm_filename = f"net_{wasm_hash[:12]}.wasm"
+                        wasm_path = os.path.join(WASM_DIR, wasm_filename)
+                        with open(wasm_path, "wb") as f:
+                            f.write(body)
+                        if not any(w["sha256"] == wasm_hash for w in result["quarantined_wasm"]):
+                            result["quarantined_wasm"].append({
+                                "filename": wasm_filename,
+                                "sha256": wasm_hash,
+                                "size": len(body),
+                                "source": "network_response",
+                                "url": res.url[:300]
+                            })
+            except Exception as wasm_err:
+                print(f"Error trapping network wasm: {wasm_err}", file=sys.stderr)
 
         page.on("response", on_response)
 
@@ -417,6 +490,28 @@ with sync_playwright() as p:
                     result["screenshots"].append("shot_after_submit.png")
             except Exception as sub_ex:
                 print(f"Error during dummy submission pass: {sub_ex}", file=sys.stderr)
+
+        # Harvest any in-memory WebAssembly evasion modules hooked via WASM_HOOK_JS
+        try:
+            dyn_wasms = page.evaluate("() => window.__pc_wasm_modules || []")
+            for b64_mod in dyn_wasms:
+                raw_bytes = base64.b64decode(b64_mod)
+                if len(raw_bytes) >= 8 and raw_bytes[:4] == b"\x00asm":
+                    dyn_hash = hashlib.sha256(raw_bytes).hexdigest()
+                    dyn_filename = f"in_memory_{dyn_hash[:12]}.wasm"
+                    dyn_path = os.path.join(WASM_DIR, dyn_filename)
+                    with open(dyn_path, "wb") as f:
+                        f.write(raw_bytes)
+                    if not any(w["sha256"] == dyn_hash for w in result["quarantined_wasm"]):
+                        result["quarantined_wasm"].append({
+                            "filename": dyn_filename,
+                            "sha256": dyn_hash,
+                            "size": len(raw_bytes),
+                            "source": "in_memory_hook",
+                            "url": page.url
+                        })
+        except Exception as wasm_hook_err:
+            print(f"Error collecting in-memory wasm: {wasm_hook_err}", file=sys.stderr)
 
     except Exception as e:
         result["error"] = str(e)
