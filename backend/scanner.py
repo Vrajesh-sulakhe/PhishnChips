@@ -28,10 +28,9 @@ if not BASE_DIR.exists():
 EVIDENCE_DIR = BASE_DIR / "evidence"
 EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
 
-# End-to-end budget (sandbox + parsing + inference) is TOTAL_BUDGET_SECONDS (default 20s, excludes the
-# interactive human-approval wait). The sandbox gets the lion's share; inference gets the remainder.
-# Clamped so a stale env value (e.g. 45) can never starve inference of its share of the budget.
-SCAN_TIMEOUT_SECONDS = max(5, min(int(os.getenv("SCAN_TIMEOUT_SECONDS", "14")), int(TOTAL_BUDGET_SECONDS) - 4))
+# End-to-end budget (sandbox + parsing + inference) is TOTAL_BUDGET_SECONDS (default 60s, excludes the
+# interactive human-approval wait). The sandbox gets initial wall-clock time; inference gets the full remaining budget.
+SCAN_TIMEOUT_SECONDS = max(5, min(int(os.getenv("SCAN_TIMEOUT_SECONDS", "20")), int(TOTAL_BUDGET_SECONDS) - 10))
 MAX_QUEUE_DEPTH = int(os.getenv("MAX_QUEUE_DEPTH", "50"))
 MAX_CONCURRENT_SCANS = int(os.getenv("MAX_CONCURRENT_SCANS", "3"))
 JOB_RETENTION_MINUTES = int(os.getenv("JOB_RETENTION_MINUTES", "30"))

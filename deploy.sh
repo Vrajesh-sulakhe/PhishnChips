@@ -43,10 +43,11 @@ ssh -i "$KEY_PATH" root@${SERVER_IP} << 'REMOTE_EXEC'
 
   echo "--> Ensuring production guardrails in .env..."
   if [ -f .env ]; then
-    grep -q "TOTAL_BUDGET_SECONDS" .env || echo "TOTAL_BUDGET_SECONDS=20" >> .env
+    sed -i 's/^TOTAL_BUDGET_SECONDS=.*/TOTAL_BUDGET_SECONDS=60/' .env 2>/dev/null || true
+    grep -q "TOTAL_BUDGET_SECONDS" .env || echo "TOTAL_BUDGET_SECONDS=60" >> .env
     grep -q "MAX_QUEUE_DEPTH" .env || echo "MAX_QUEUE_DEPTH=50" >> .env
     grep -q "REPUTATION_TOP_N" .env || echo "REPUTATION_TOP_N=10000" >> .env
-    sed -i 's/^SCAN_TIMEOUT_SECONDS=45/SCAN_TIMEOUT_SECONDS=14/' .env
+    sed -i 's/^SCAN_TIMEOUT_SECONDS=.*/SCAN_TIMEOUT_SECONDS=20/' .env 2>/dev/null || true
     chmod 600 .env
   fi
 

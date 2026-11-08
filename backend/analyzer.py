@@ -41,7 +41,7 @@ from schemas import (
 
 load_dotenv()
 
-TOTAL_BUDGET_SECONDS = float(os.getenv("TOTAL_BUDGET_SECONDS", "20"))
+TOTAL_BUDGET_SECONDS = float(os.getenv("TOTAL_BUDGET_SECONDS", "60"))
 MIN_INFERENCE_SECONDS = float(os.getenv("MIN_INFERENCE_SECONDS", "3"))
 
 LLMCall = Callable[[List[Dict[str, Any]], float], Awaitable[str]]
@@ -85,7 +85,7 @@ def _sync_chat(messages: List[Dict[str, Any]], timeout: float, config: Dict[str,
     import openai
 
     client = openai.OpenAI(base_url=config["base_url"], api_key=config["api_key"], timeout=timeout, max_retries=0)
-    kwargs = dict(model=config["model"], messages=messages, temperature=0.0, max_tokens=1500)
+    kwargs = dict(model=config["model"], messages=messages, temperature=0.0, max_tokens=4096)
     try:
         try:
             resp = client.chat.completions.create(response_format={"type": "json_object"}, **kwargs)
@@ -103,6 +103,14 @@ def _sync_chat(messages: List[Dict[str, Any]], timeout: float, config: Dict[str,
     except (openai.APIConnectionError, openai.APIStatusError) as e:
         raise InferenceUnavailable("api_error", str(e)) from e
     content = resp.choices[0].message.content if resp.choices and resp.choices[0].message else None
+    if not content or not content.strip():
+        # Fallback: Check if reasoning models (e.g. GLM-5.3) placed the JSON in their reasoning block
+        reasoning = getattr(resp.choices[0].message, "reasoning", None) or getattr(resp.choices[0].message, "reasoning_content", None)
+        if reasoning:
+            json_match = re.search(r"\{[\s\S]*\}", reasoning)
+            if json_match:
+                content = json_match.group(0)
+
     if not content or not content.strip():
         raise InferenceUnavailable("empty_response", "model returned empty content")
     return content
@@ -133,6 +141,7 @@ _SYSTEM_PROMPT = (
     "'Claims to be Wikipedia -> landing apex wikipedia.org is reputable and TLS org is Wikimedia Foundation', "
     "'Credential theft possible? -> no password/OTP/card fields and no cross-origin form action'.\n"
     "6. Heuristic signals provided are hints; hard_signals are physically observed, soft_signals are weak.\n"
+    "7. Keep internal reasoning concise and focused on observed facts. Output the single valid JSON object promptly.\n"
     "Reply with ONLY one JSON object, no prose, no markdown, exactly this schema:\n" + MODEL_OUTPUT_SCHEMA_TEXT
 )
 

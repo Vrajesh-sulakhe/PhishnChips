@@ -11,7 +11,7 @@ def test_metrics_and_health_exposed():
                  "phishchips_schema_violations_total", "phishchips_scans_total", "phishchips_verdict_confidence"):
         assert name in m.text
     h = c.get("/api/health").json()
-    assert h["time_budget_seconds"] <= 20 and h["reputation_list_size"] > 5000 and "metrics" in h
+    assert h["time_budget_seconds"] <= 60 and h["reputation_list_size"] > 5000 and "metrics" in h
 
 
 def test_recent_scans_and_reputation_healing():
