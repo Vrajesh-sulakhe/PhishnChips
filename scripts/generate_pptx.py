@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Phish&Chips PowerPoint (.pptx) Generator
-Generates an 8-slide, 16:9 presentation deck formatted with cyber dark aesthetic,
-cards, badges, code terminal blocks, and speaker notes.
+Phish&Chips PowerPoint (.pptx) Generator - Plain English Edition
+Generates an 8-slide, 16:9 presentation deck that explains everything
+happening in clear, accessible, plain English while highlighting all
+Vultr hackathon criteria, Challenge 1 containment, and technical rigor.
 """
 
 import os
@@ -48,14 +49,14 @@ def add_base_slide(prs):
 
 
 def add_header(slide, tag_text, title_text, subtitle_text, tag_color=COLOR_RED):
-    # Top progress/accent line
+    # Top progress line
     line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(13.333), Inches(0.06))
     line.fill.solid()
     line.fill.fore_color.rgb = tag_color
     line.line.color.rgb = tag_color
 
     # Header Text Box
-    txBox = slide.shapes.add_textbox(Inches(0.8), Inches(0.4), Inches(11.733), Inches(1.3))
+    txBox = slide.shapes.add_textbox(Inches(0.8), Inches(0.4), Inches(11.733), Inches(1.35))
     tf = txBox.text_frame
     tf.word_wrap = True
     tf.margin_left = tf.margin_top = tf.margin_right = tf.margin_bottom = 0
@@ -76,7 +77,7 @@ def add_header(slide, tag_text, title_text, subtitle_text, tag_color=COLOR_RED):
     p_title.font.size = Pt(26)
     p_title.font.bold = True
     p_title.font.color.rgb = COLOR_TEXT_WHITE
-    p_title.space_after = Pt(3)
+    p_title.space_after = Pt(4)
 
     # Subtitle
     p_sub = tf.add_paragraph()
@@ -86,7 +87,7 @@ def add_header(slide, tag_text, title_text, subtitle_text, tag_color=COLOR_RED):
     p_sub.font.color.rgb = COLOR_TEXT_MUTED
 
 
-def add_card(slide, left, top, width, height, title, items, accent_color=COLOR_BLUE, bg_color=COLOR_CARD):
+def add_card(slide, left, top, width, height, title, items, accent_color=COLOR_BLUE, bg_color=COLOR_CARD, title_size=Pt(16), body_size=Pt(11.5)):
     # Main card shape
     card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height)
     card.fill.solid()
@@ -110,17 +111,17 @@ def add_card(slide, left, top, width, height, title, items, accent_color=COLOR_B
     p_title = tf.paragraphs[0]
     p_title.text = title
     p_title.font.name = FONT_HEADING
-    p_title.font.size = Pt(16)
+    p_title.font.size = title_size
     p_title.font.bold = True
     p_title.font.color.rgb = COLOR_TEXT_WHITE
     p_title.space_after = Pt(8)
 
-    # Items / Bullets
+    # Items / Paragraphs
     for item in items:
         p = tf.add_paragraph()
-        p.text = f"•  {item}" if not item.startswith("•") and not item.startswith("http") else item
+        p.text = item
         p.font.name = FONT_BODY
-        p.font.size = Pt(11.5)
+        p.font.size = body_size
         p.font.color.rgb = COLOR_TEXT_MUTED
         p.space_after = Pt(6)
 
@@ -141,21 +142,21 @@ def add_terminal(slide, left, top, width, height, title, lines):
     p_head = tf.paragraphs[0]
     p_head.text = f"💻 {title}"
     p_head.font.name = FONT_MONO
-    p_head.font.size = Pt(11)
+    p_head.font.size = Pt(10.5)
     p_head.font.bold = True
     p_head.font.color.rgb = COLOR_BLUE
-    p_head.space_after = Pt(6)
+    p_head.space_after = Pt(4)
 
     for line in lines:
         p = tf.add_paragraph()
         p.text = line
         p.font.name = FONT_MONO
         p.font.size = Pt(9.5)
-        if "[PASS]" in line or "verified" in line or "destroyed" in line:
+        if "[PASS]" in line or "blocked" in line or "Safe" in line or "destroyed" in line:
             p.font.color.rgb = COLOR_GREEN
-        elif "[BLOCKED]" in line or "INTERCEPT" in line or "SCAM" in line:
+        elif "[BLOCKED]" in line or "INTERCEPT" in line or "QUARANTINED" in line or "SCAM" in line:
             p.font.color.rgb = COLOR_RED
-        elif "Testing" in line or "INFO" in line or "PATIENT" in line:
+        elif "Testing" in line or "NOTE" in line or "WHAT HAPPENS" in line:
             p.font.color.rgb = COLOR_AMBER
         else:
             p.font.color.rgb = COLOR_CODE_TEXT
@@ -191,7 +192,7 @@ def set_speaker_notes(slide, notes_text):
 
 
 # ==============================================================================
-# SLIDE BUILDERS
+# SLIDES: PLAIN ENGLISH & INTUITIVE FOR ANY READER
 # ==============================================================================
 
 def build_slide_1(prs):
@@ -200,49 +201,53 @@ def build_slide_1(prs):
         slide,
         "Vultr Agent Rush Hackathon · Track 01: Blast Radius Zero",
         "🐟🍟 Phish&Chips",
-        "Fresh phish, fried in a sandbox. Ephemeral detonation & threat intelligence platform."
+        "What if you could safely inspect ANY suspicious link with zero risk to your computer?"
     )
 
     add_card(
         slide,
         Inches(0.8), Inches(2.0), Inches(5.7), Inches(3.2),
-        "🛡️ Challenge 1: Blast Radius Zero",
+        "🛡️ The Big Idea: Blast Radius Zero",
         [
-            "Untrusted links, fake KYC notices, and malicious payloads are detonated inside an ephemeral, locked-down browser cage.",
-            "Host system, cloud credentials, and analyst devices remain completely isolated and unharmed at all times.",
-            "Guaranteed Ephemerality: Every sandbox container is destroyed immediately after inspection (<45 seconds)."
+            "Imagine getting a suspicious SMS claiming your bank account is locked or offering an urgent tax refund.",
+            "Opening the link on your phone or laptop could steal your passwords or secretly install malware.",
+            "Phish&Chips opens the link for you inside a throwaway, digital containment room on Vultr Cloud. The threat is analyzed, dismantled, and deleted in seconds—leaving your real computer completely untouched."
         ],
-        accent_color=COLOR_RED
+        accent_color=COLOR_RED,
+        body_size=Pt(12)
     )
 
     add_card(
         slide,
         Inches(6.8), Inches(2.0), Inches(5.7), Inches(3.2),
-        "⚡ Cloud & Inference Infrastructure",
+        "⚡ Powered by Vultr Cloud & AI",
         [
-            "Vultr Cloud Compute (Bangalore Region - 4 vCPUs / 8 GB RAM / 160 GB SSD) orchestrating central FastAPI control plane.",
-            "Vultr Serverless Inference (api.vultrinference.com) running flagship GLM-5.3 deep threat reasoning engine.",
-            "Dedicated phishnet bridge with kernel iptables rules blocking host gateway, private subnets, and cloud metadata."
+            "Vultr Cloud Compute Host: A secure cloud server in Bangalore that manages every investigation and runs the isolated sandboxes.",
+            "Vultr Serverless Inference (GLM-5.3): A smart AI reasoning engine that examines the visual webpage, hidden code, and network trails to give you a plain-English verdict.",
+            "Complete Isolation: Built-in firewalls ensure malicious websites cannot talk to our server, access private files, or reach other computers."
         ],
-        accent_color=COLOR_BLUE
+        accent_color=COLOR_BLUE,
+        body_size=Pt(12)
     )
 
-    # Highlight box at bottom
     add_card(
         slide,
         Inches(0.8), Inches(5.4), Inches(11.7), Inches(1.3),
-        "🌐 Production Status & Team",
+        "🌐 Live & Ready to Test",
         [
-            "Live Production URL: https://139.84.159.12.sslip.io (Automated TLS 1.3 via Caddy)",
-            "Team: alphax  |  Architecture: Host / Agent / Caged Sandbox Model  |  Status: 100% Deployed & Operational"
+            "Live Production Website: https://139.84.159.12.sslip.io  (Fully secure HTTPS)",
+            "Team: alphax  |  Status: 100% Operational  |  Try testing demo://fake-bank or https://wikipedia.org right now!"
         ],
-        accent_color=COLOR_GREEN
+        accent_color=COLOR_GREEN,
+        body_size=Pt(12)
     )
 
     add_footer(slide, 1)
     set_speaker_notes(slide, """
-Hello judges and fellow builders! Welcome to Phish&Chips: an autonomous, ephemeral detonation and threat analysis platform.
-In an era where phishing attacks bypass traditional static blocklists in minutes, Phish&Chips introduces Blast Radius Zero — an agentic sandbox running on Vultr Cloud Compute that safely visits untrusted links, reverses malicious scripts and binary drops, executes controlled canary submissions, and synthesizes deep threat verdicts using Vultr Serverless Inference.
+Welcome to Phish&Chips!
+In plain English: we solve the dangerous dilemma of clicking suspicious links.
+When someone sends you a fake bank alert or a fishy KYC text, you normally have only two bad options: click it and risk getting hacked, or ignore it and stay in the dark.
+Phish&Chips gives you a safe third option. You give us the link, and our autonomous agent opens it inside a sealed, throwaway browser on Vultr Cloud. The agent looks at the page, tests the forms, intercepts any viruses, and uses Vultr's GLM-5.3 AI to tell you exactly what it found. When it's done, the entire virtual room is destroyed. Zero risk, zero blast radius.
 """)
 
 
@@ -250,60 +255,63 @@ def build_slide_2(prs):
     slide = add_base_slide(prs)
     add_header(
         slide,
-        "The Threat Landscape & Crisis",
-        "The $10B Phishing Crisis & Analyst Vulnerability",
-        "Why traditional antivirus scanners and static URL blocklists fail against modern campaigns."
+        "The Everyday Phishing Trap",
+        "The Real-World Crisis & Why Antivirus Isn't Enough",
+        "Why clicking a single link can drain a bank account, and why traditional security tools fail."
     )
 
     add_card(
         slide,
         Inches(0.8), Inches(2.0), Inches(3.7), Inches(3.1),
-        "⏱️ Ephemeral Lifespans",
+        "📩 1. The Deceptive Lure",
         [
-            "Modern phishing domains live for only 4 to 8 hours.",
-            "Static domain blocklists update too slowly, allowing thousands of credentials to be stolen before blacklisting.",
-            "Attackers leverage dynamic DNS and ephemeral subdomains."
+            "Scammers send urgent SMS messages or emails pretending to be State Bank of India, electricity providers, or courier deliveries.",
+            "They create panic: 'Update your KYC within 24 hours or your account will be frozen!'"
         ],
-        accent_color=COLOR_AMBER
+        accent_color=COLOR_AMBER,
+        body_size=Pt(12)
     )
 
     add_card(
         slide,
         Inches(4.8), Inches(2.0), Inches(3.7), Inches(3.1),
-        "🎭 Evasive Behaviors",
+        "🪤 2. The Silent Trap",
         [
-            "Attackers employ client-side browser fingerprinting and bot-detection evasion.",
-            "Obfuscated JavaScript and WebAssembly payloads camouflage malicious DOM behavior.",
-            "Targeted regional themes: fake KYC, UPI refund scams, and banking portals."
+            "Victims land on an exact clone of their bank's login portal.",
+            "While the user types their credentials, the site silently triggers a background download of a disguised virus or spyware."
         ],
-        accent_color=COLOR_RED
+        accent_color=COLOR_RED,
+        body_size=Pt(12)
     )
 
     add_card(
         slide,
         Inches(8.8), Inches(2.0), Inches(3.7), Inches(3.1),
-        "☣️ Analyst Blast Radius",
+        "⏳ 3. Blocklists Are Too Slow",
         [
-            "Manual inspection exposes security teams to drive-by executable downloads and zero-days.",
-            "Host cookies, session tokens, and local network segments are put at risk.",
-            "Analyst fatigue leads to missed indicators and compromised workstations."
+            "Scammers create new web addresses every 4 to 8 hours.",
+            "By the time traditional antivirus companies add a site to their blocklist, thousands of people have already been scammed."
         ],
-        accent_color=COLOR_BLUE
+        accent_color=COLOR_BLUE,
+        body_size=Pt(12)
     )
 
     add_card(
         slide,
         Inches(0.8), Inches(5.3), Inches(11.7), Inches(1.4),
-        "🎯 The Essential Question",
+        "💡 The Core Problem",
         [
-            "How can security teams, fraud desks, and ordinary citizens safely dissect and interact with a hostile link in real time without putting themselves or their systems at risk?"
+            "Security analysts and everyday users cannot safely inspect a suspicious website because opening the link on their device could infect their workstation or expose corporate credentials. We needed a way to visit the danger zone without being in danger."
         ],
-        accent_color=COLOR_GREEN
+        accent_color=COLOR_GREEN,
+        body_size=Pt(12)
     )
 
     add_footer(slide, 2)
     set_speaker_notes(slide, """
-Every day, millions of people receive deceptive SMS messages, UPI refund links, or urgent KYC verification alerts. Traditional blocklists are too slow because attackers spin up new domains constantly. But opening these links to inspect them is dangerous — they fingerprint your browser, download malicious executables, or steal sensitive tokens. How do we inspect untrusted links without putting ourselves or our infrastructure at risk?
+Here is the everyday reality: phishing is a multi-billion dollar crisis because it exploits urgency and trust.
+Attackers send messages that look identical to official bank notices or electricity bills. But traditional security defenses are fundamentally reactive. A scam website only stays online for a few hours. By the time security blocklists flag it, the attackers have already moved to a new domain.
+Worse, if a security analyst wants to verify a link, just opening it puts their own computer at risk of drive-by malware. We needed an active, containment-first defense.
 """)
 
 
@@ -311,63 +319,64 @@ def build_slide_3(prs):
     slide = add_base_slide(prs)
     add_header(
         slide,
-        "Core Philosophy · Track 01",
-        "Blast Radius Zero: Containment as the Product",
-        "Four non-negotiable guarantees enforced on every single detonation."
+        "How We Keep You Safe · Track 01 Mandate",
+        "What Does 'Blast Radius Zero' Mean in Plain English?",
+        "Four simple rules that guarantee dangerous websites can never escape or harm anyone."
     )
 
     add_card(
         slide,
         Inches(0.8), Inches(2.0), Inches(5.7), Inches(2.2),
-        "🔒 1. Process Stripping",
+        "🚪 1. A Disposable Digital Room (The Sandbox)",
         [
-            "Unprivileged execution under runner (UID 10001).",
-            "Complete Linux capability drop (--cap-drop=ALL).",
-            "Privilege escalation prevented via no-new-privileges.",
-            "Root filesystem strictly mounted --read-only."
+            "Every link is opened in a freshly created virtual browser.",
+            "It has no connection to your computer, your browser, or your personal files. It runs on a remote Vultr server."
         ],
-        accent_color=COLOR_RED
+        accent_color=COLOR_RED,
+        body_size=Pt(11.5)
     )
 
     add_card(
         slide,
         Inches(6.8), Inches(2.0), Inches(5.7), Inches(2.2),
-        "🛡️ 2. Secret & Host Hygiene",
+        "🤐 2. Hands Tied Behind Its Back (Process Stripping)",
         [
-            "Zero API keys, cloud tokens, or SSH keys enter the sandbox.",
-            "Docker socket is NEVER mounted inside the container.",
-            "Container exists purely as a throwaway browser harness."
+            "The browser has all administrator powers permanently stripped away.",
+            "It cannot install new programs, change system settings, or view any passwords or cloud keys."
         ],
-        accent_color=COLOR_BLUE
+        accent_color=COLOR_BLUE,
+        body_size=Pt(11.5)
     )
 
     add_card(
         slide,
         Inches(0.8), Inches(4.4), Inches(5.7), Inches(2.3),
-        "⚡ 3. Hard Cgroup Resource Bounds",
+        "🧱 3. Walled Off from the World (Network Shield)",
         [
-            "Linux cgroups v2 clamps: --cpus=1, --memory=1g, --pids-limit=256.",
-            "Hard 45-second orchestrator kill switch stops runaway loops.",
-            "Blocks cryptominers, fork bombs, and CPU exhaustion attacks."
+            "Strict firewall rules block the sandbox from talking to the host server, internal corporate networks, or cloud account metadata.",
+            "The browser can only load the target webpage—nothing else."
         ],
-        accent_color=COLOR_AMBER
+        accent_color=COLOR_AMBER,
+        body_size=Pt(11.5)
     )
 
     add_card(
         slide,
         Inches(6.8), Inches(4.4), Inches(5.7), Inches(2.3),
-        "🔥 4. Total Ephemerality",
+        "💥 4. Vaporized in 45 Seconds (Total Ephemerality)",
         [
-            "Containers destroyed immediately after telemetry collection via --rm.",
-            "Background janitor purges stale artifacts and orphan containers.",
-            "Final verified log: '🍟 Phish fried. Sandbox destroyed.'"
+            "The moment the investigation finishes, the entire digital room is permanently destroyed.",
+            "Nothing survives. Zero trace, zero persistence: 'Phish fried. Sandbox destroyed.'"
         ],
-        accent_color=COLOR_GREEN
+        accent_color=COLOR_GREEN,
+        body_size=Pt(11.5)
     )
 
     add_footer(slide, 3)
     set_speaker_notes(slide, """
-The answer is Blast Radius Zero. Phish&Chips treats every URL as hostile. When a link is submitted, our FastAPI control plane on a hardened Vultr Cloud Compute VM spins up an isolated, unprivileged Playwright container on a custom 'phishnet' bridge. The sandbox is completely walled off by kernel iptables rules: it cannot touch the host, internal private subnets, or cloud metadata. Once evidence is gathered, the container is destroyed instantly.
+What does 'Blast Radius Zero' mean in plain language?
+It means that even if a link contains the nastiest zero-day exploit or malicious virus in existence, its blast radius is exactly zero.
+The link is opened inside a throwaway container that has no administrator privileges, cannot modify files, is firewalled away from our server, and is destroyed in under 45 seconds. Even if the website tries to explode, it explodes inside an empty concrete bunker.
 """)
 
 
@@ -375,56 +384,59 @@ def build_slide_4(prs):
     slide = add_base_slide(prs)
     add_header(
         slide,
-        "System Architecture & Deployment",
-        "Orchestration Architecture on Vultr",
-        "Central Control Plane, Isolated Network Cage, and Serverless AI Reasoning."
+        "Under the Hood · Orchestration Pipeline",
+        "How Phish&Chips Works Step-by-Step",
+        "What actually happens behind the scenes from the moment you paste a URL."
     )
 
     add_card(
         slide,
         Inches(0.8), Inches(2.0), Inches(3.7), Inches(4.7),
-        "1. Host Control Plane",
+        "Step 1: The Request",
         [
-            "Vultr Cloud Compute BLR (4 vCPUs / 8 GB RAM).",
-            "Caddy Reverse Proxy: Automated Let's Encrypt TLS 1.3 on sslip.io.",
-            "FastAPI Orchestrator: Input validation, SSRF IP defense, SQLite WAL telemetry.",
-            "SSE Event Broadcaster: Real-time event streaming to web dashboard (/api/scan/{id}/stream).",
-            "Prometheus Metrics (/metrics): Scan rates, latency, and sandbox health."
+            "1. You paste a suspicious link into the dashboard at 139.84.159.12.sslip.io.",
+            "2. Our central FastAPI control plane checks the URL to ensure it isn't an internal address.",
+            "3. It prepares an isolated virtual sandbox slot (limiting server load to prevent overload).",
+            "4. A live animated graph shows the investigation starting in real time."
         ],
-        accent_color=COLOR_BLUE
+        accent_color=COLOR_BLUE,
+        body_size=Pt(12)
     )
 
     add_card(
         slide,
         Inches(4.8), Inches(2.0), Inches(3.7), Inches(4.7),
-        "2. Caged phishnet Sandbox",
+        "Step 2: The Detonation",
         [
-            "Dedicated Bridge (172.30.0.0/16).",
-            "iptables Drops: Host gateway (172.30.0.1), private RFC1918 IPs, and cloud metadata (169.254.169.254).",
-            "Playwright Chromium non-root automation (UID 10001).",
-            "Drive-By Malware Interceptor: Intercepts and quenches dropped .exe / .bin files.",
-            "REA Static Engine: Disassembles scripts, wasm, and binaries."
+            "1. An unprivileged headless browser enters the quarantined 'phishnet' network.",
+            "2. It navigates to the untrusted link, taking visual screenshots and recording every hop.",
+            "3. If the page tries to drop an executable file, the interceptor traps it immediately.",
+            "4. Our REA engine extracts and disassembles all hidden scripts on the page."
         ],
-        accent_color=COLOR_RED
+        accent_color=COLOR_RED,
+        body_size=Pt(12)
     )
 
     add_card(
         slide,
         Inches(8.8), Inches(2.0), Inches(3.7), Inches(4.7),
-        "3. Vultr Serverless Inference",
+        "Step 3: The AI Verdict",
         [
-            "Endpoint: api.vultrinference.com/v1.",
-            "Flagship Model: GLM-5.3 (with fallback multi-model support).",
-            "Deep Threat Reasoning: Evaluates DOM telemetry, redirect chains, screenshots, and REA disassembly.",
-            "Strict Pydantic Validation: Deterministic schema output with zero hallucinations.",
-            "MITRE ATT&CK Mapping: Categorizes tactics (T1056, T1071, T1204)."
+            "1. Forensic telemetry, code snippets, and screenshots are sent to Vultr Serverless Inference.",
+            "2. Flagship AI model GLM-5.3 reasons through all evidence like a senior security analyst.",
+            "3. It delivers a clear verdict: SAFE, SUSPICIOUS, or SCAM with confidence scores.",
+            "4. The container is destroyed, and the user receives a clean report."
         ],
-        accent_color=COLOR_GREEN
+        accent_color=COLOR_GREEN,
+        body_size=Pt(12)
     )
 
     add_footer(slide, 4)
     set_speaker_notes(slide, """
-Here is our full architecture. At the perimeter, Caddy handles automated TLS on 139.84.159.12.sslip.io. The FastAPI control plane validates the input, executes SSRF checks, and spins up the caged sandbox container. The container detonates the site, intercepts network requests, and collects forensic artifacts. That evidence is then sent directly to Vultr Serverless Inference running GLM-5.3 for deep reasoning, producing structured Pydantic verdicts with MITRE ATT&CK tactics.
+Here is the step-by-step journey of an investigation in plain English.
+First: you paste a link. Our control plane on Vultr validates it and spins up the digital sandbox.
+Second: the quarantined browser visits the site, snaps screenshots, logs redirect hops, and traps any hidden viruses or credential forms.
+Third: all that evidence is handed over to Vultr Serverless Inference. Our GLM-5.3 AI reviews everything and gives you a definitive, easy-to-understand verdict. Then the sandbox is vaporized.
 """)
 
 
@@ -432,68 +444,70 @@ def build_slide_5(prs):
     slide = add_base_slide(prs)
     add_header(
         slide,
-        "Challenge 1 Mandatory Requirement",
-        "The Containment Moment: Dual Boundary Proof",
-        "Verifiable proof of network isolation and drive-by malware neutralization."
+        "Challenge 1 Mandatory Proof",
+        "The Containment Moment: Trapping the Threat Live",
+        "Two real moments where the platform catches and neutralizes attacks in mid-air."
     )
 
     add_card(
         slide,
         Inches(0.8), Inches(2.0), Inches(5.7), Inches(2.1),
-        "🌐 Moment 1: Network Boundary Drop",
+        "🛡️ Moment 1: The Firewall Shield in Action",
         [
-            "Active sandbox is forbidden from communicating with the host or private infrastructure.",
-            "Kernel-level iptables rules drop all packets to gateway (172.30.0.1) and metadata.",
-            "Verified via automated test suite scripts/verify_containment.sh."
+            "What if malicious code inside the sandbox tries to hack the host server?",
+            "Our firewall rules instantly detect and drop any attempt to talk to the server gateway, internal company subnets, or Vultr cloud metadata.",
+            "The threat is locked inside the room with nowhere to escape."
         ],
-        accent_color=COLOR_BLUE
+        accent_color=COLOR_BLUE,
+        body_size=Pt(11.5)
     )
 
     add_terminal(
         slide,
         Inches(0.8), Inches(4.3), Inches(5.7), Inches(2.4),
-        "verify_containment.sh Execution Log",
+        "What the Server Sees: verify_containment.sh",
         [
-            "Testing Public Internet (Cloudflare 1.1.1.1) ... [PASS] REACHABLE",
-            "Testing Host Gateway (172.30.0.1:8000) ......... [PASS] BLOCKED",
-            "Testing Host Public IP (139.84.159.12:8000) ..... [PASS] BLOCKED",
-            "Testing Cloud Metadata (169.254.169.254) ........ [PASS] BLOCKED",
-            "Testing Private Subnet 10.0.0.1 ................ [PASS] BLOCKED",
-            "Testing Private Subnet 192.168.1.1 ............. [PASS] BLOCKED",
-            "🎉 ALL CONTAINMENT CHECKS PASSED. Blast Radius Zero verified!"
+            "Checking Internet access (Cloudflare 1.1.1.1) .... [PASS] Reachable",
+            "Checking Host Server Gateway (172.30.0.1) ........ [PASS] BLOCKED",
+            "Checking Host Public IP Address ................. [PASS] BLOCKED",
+            "Checking Vultr Cloud Metadata (169.254.169.254) .. [PASS] BLOCKED",
+            "Checking Private Corporate Subnets .............. [PASS] BLOCKED",
+            "🎉 RESULT: All unauthorized exits are 100% BLOCKED."
         ]
     )
 
     add_card(
         slide,
         Inches(6.8), Inches(2.0), Inches(5.7), Inches(2.1),
-        "☣️ Moment 2: Drive-By Malware Interception",
+        "☣️ Moment 2: Catching a Virus in Mid-Air",
         [
-            "Phishing site attempts automated drop of SBI_Mandatory_Security_Patch.exe.",
-            "Playwright browser handler intercepts and quenches the download stream.",
-            "File quarantined into /out volume; ZERO execution of binary bytes."
+            "When testing fake banking websites, the page secretly triggers an automated download of a fake security tool ('SBI_Security_Patch.exe').",
+            "Our browser catches the download stream in mid-air and stops it.",
+            "Zero bytes ever execute on the machine. It is quarantined and analyzed safely."
         ],
-        accent_color=COLOR_RED
+        accent_color=COLOR_RED,
+        body_size=Pt(11.5)
     )
 
     add_terminal(
         slide,
         Inches(6.8), Inches(4.3), Inches(5.7), Inches(2.4),
-        "Browser Interception & REA Forensic Log",
+        "What the Interceptor Catches: Malware Intercept Log",
         [
-            "[INTERCEPT] Download stream canceled and quarantined.",
-            "Payload: SBI_Mandatory_Security_Patch.exe (84.2 KB)",
-            "SHA256: 48f95c5240be6d841e2be6d2a71d79e...",
-            "Shannon Entropy: 7.82 (High - Packed/Encrypted)",
-            "MITRE ATT&CK: T1204.002 Malicious File Dropped",
-            "Execution Status: 0 instructions run on host. QUARANTINED.",
-            "Verdict: Malicious Payload Captured with Zero Host Exposure."
+            "[ALERT] Hostile page attempted drive-by download!",
+            "File: SBI_Mandatory_Security_Patch.exe (84.2 KB)",
+            "Interception: Download stopped and quenched instantly.",
+            "Entropy Analysis: 7.82 / 8.0 (Packed / Obfuscated virus)",
+            "Execution State: 0 lines of code executed on host.",
+            "Status: QUARANTINED into isolated storage for inspection."
         ]
     )
 
     add_footer(slide, 5)
     set_speaker_notes(slide, """
-For Challenge 1, we demonstrate our dual Containment Moment. First, our automated verification script proves that any network request from the sandbox to the host gateway, private subnets, or Vultr metadata is immediately dropped at the kernel level by iptables. Second, when a phishing site triggers an automated malware download — such as a fake SBI banking security patch — our browser interceptor traps the file instantly. The executable is quarantined, hashed, and disassembled by our REA engine without a single instruction ever executing on the host.
+For Challenge 1, we demonstrate our dual Containment Moments.
+In Moment 1: our firewall tests prove that the sandbox cannot reach our server gateway, internal subnets, or cloud account keys. Any attempt to reach the host is blocked at the kernel level.
+In Moment 2: when a scam banking site tries to secretly download a fake security update, our browser catches the file in mid-air. It cancels the download before it touches the operating system, hashes it, and inspects its code without ever running a single instruction. That is real containment.
 """)
 
 
@@ -501,53 +515,53 @@ def build_slide_6(prs):
     slide = add_base_slide(prs)
     add_header(
         slide,
-        "Autonomous Agent Behaviors",
-        "Pattern B Decoy Pass & REA Engine",
-        "Active credential discovery and static binary/script reverse engineering."
+        "Smart Autonomous Agent Features",
+        "Smart Features: The 'Decoy Pass' & The Code X-Ray",
+        "How the AI tricks scammers and inspects their hidden code without risking your data."
     )
 
     add_card(
         slide,
         Inches(0.8), Inches(2.0), Inches(5.7), Inches(4.7),
-        "👤 Pattern B: Sandboxed Browser Use with Human Gate",
+        "🎭 Pattern B: The 'Fake Decoy' Trick (Human Gate)",
         [
-            "Pass 1: Passive Reconnaissance",
-            "• Quarantined Playwright browser opens link and takes screenshot.",
-            "• Interrogates DOM for credential fields (username, password, OTP, PAN).",
-            "• Pauses scan and presents operator with decision modal.",
-            "Human Approval Gate",
-            "• 'Credential harvester detected. Authorize decoy submission pass?'",
-            "• Operator controls whether the agent touches form inputs.",
-            "Pass 2: Synthetic Canary Submission",
-            "• Browser injects fake canary data (test_canary_user@example.com).",
-            "• Clicks submit and traces network exfiltration endpoints (POST C2).",
-            "• Exposes backend attacker infrastructure without leaking user data."
+            "Phase 1: Finding the Trap (Passive Look)",
+            "• The browser loads the page and spots username & password boxes.",
+            "• Instead of typing blindly, the agent immediately pauses.",
+            "The Human Safety Gate",
+            "• A pop-up asks you: 'I detected a password harvester. May I feed it fake decoy credentials to see where they send the data?'",
+            "• You remain in full control of whether the agent interacts.",
+            "Phase 2: Feeding the Decoy",
+            "• If you approve, the browser types fake dummy data ('test_canary_user') and clicks Submit.",
+            "• It tracks where the scammer exfiltrates the password, exposing their hidden server address without risking any real user's data!"
         ],
-        accent_color=COLOR_AMBER
+        accent_color=COLOR_AMBER,
+        body_size=Pt(11.5)
     )
 
     add_card(
         slide,
         Inches(6.8), Inches(2.0), Inches(5.7), Inches(4.7),
-        "🔍 Reverse Engineering Anything (REA) Engine",
+        "🔬 REA Engine: The Code X-Ray",
         [
-            "Static Inspection by Default",
-            "• Automatically dissects inline scripts, external JS routines, and WASM.",
-            "• Calculates Shannon entropy (>7.5 indicates packed/encrypted code).",
-            "• Extracts hardcoded IOC URLs, API keys, and exfiltration hooks.",
-            "MITRE ATT&CK Matrix Mapping",
-            "• T1056: Input Capture (credential & keystroke listeners)",
-            "• T1071: Exfiltration Over C2 (abnormal fetch / beacon beacons)",
-            "• T1204: Malicious File Quarantine (intercepted downloads)",
-            "UI Disassembly Terminal",
-            "• Renders disassembly preview card directly on the web dashboard."
+            "Static Analysis by Default",
+            "• Every single scan automatically x-rays the website's background code (JavaScript, WebAssembly, and dropped files).",
+            "Measuring Code Randomness (Entropy)",
+            "• Normal code looks readable. Malware code is often heavily scrambled or encrypted to hide from antivirus.",
+            "• Our engine calculates an 'entropy' score: high entropy means hidden danger.",
+            "Mapping Scammer Tricks (MITRE ATT&CK)",
+            "• Translates technical tricks into clear threat categories: 'Input Capture' (keystroke stealing), 'Exfiltration' (sending data to hacker servers), or 'Malicious File'."
         ],
-        accent_color=COLOR_BLUE
+        accent_color=COLOR_BLUE,
+        body_size=Pt(11.5)
     )
 
     add_footer(slide, 6)
     set_speaker_notes(slide, """
-Phish&Chips implements the hackathon's required Pattern B workflow. In Pass 1, the agent navigates passively. When it spots a credential harvesting form, it stops and requests human authorization. If approved, Pass 2 fires: the agent submits synthetic decoy credentials to observe where the data exfiltrates, capturing post-submit redirection and server-side behavior. Furthermore, our REA engine extracts every inline script and disassembled executable, calculating entropy and mapping tactics to MITRE ATT&CK.
+Phish&Chips implements the hackathon's required Pattern B workflow.
+In plain terms: when the AI sees a login box, it stops and asks the user for permission.
+If approved, it executes the 'Fake Decoy' trick: feeding fake dummy credentials into the scam form to see where the data gets sent. This exposes the scammer's backend server while keeping real user information 100% safe.
+At the same time, our REA engine acts like an X-ray machine: analyzing the hidden code on the page, checking if it's scrambled to evade antivirus, and translating the findings into clear categories.
 """)
 
 
@@ -555,61 +569,67 @@ def build_slide_7(prs):
     slide = add_base_slide(prs)
     add_header(
         slide,
-        "Real-World Impact & Regional Remediation",
-        "From Detection to Remediation in Seconds",
-        "Zero false positives, 1-click legal evidence lockers, and emergency escalation."
+        "Real-World Help for Everyday People",
+        "From Threat Detection to Immediate Action",
+        "Giving victims, everyday citizens, and security teams the exact tools to fight back."
     )
 
     add_card(
         slide,
         Inches(0.8), Inches(2.0), Inches(3.7), Inches(3.2),
-        "📦 1-Click Abuse Takedown",
+        "📦 1-Click Takedown Pack",
         [
-            "Auto-generates signed .tar.gz Evidence Locker.",
-            "Includes screenshots, HAR network traces, DOM dumps, and registrar abuse contacts.",
-            "Ready to send to AWS, Cloudflare, or registrar abuse desks."
+            "Don't just detect scams—shut them down.",
+            "With one click, download a signed evidence pack (.tar.gz) with screenshots and logs ready to send to web hosts to get the fake site taken offline."
         ],
-        accent_color=COLOR_BLUE
+        accent_color=COLOR_BLUE,
+        body_size=Pt(12)
     )
 
     add_card(
         slide,
         Inches(4.8), Inches(2.0), Inches(3.7), Inches(3.2),
-        "🇮🇳 Indian Localization",
+        "🇮🇳 In Your Native Language",
         [
-            "Trilingual interface in English, हिन्दी (Hindi), and ಕನ್ನಡ (Kannada).",
-            "Protects non-technical frontline citizens targeted by fake KYC and UPI refund fraud.",
-            "One-click language switcher in dashboard header."
+            "Scammers specifically target elderly or non-technical people in regional languages.",
+            "Phish&Chips supports English, हिन्दी (Hindi), and ಕನ್ನಡ (Kannada) so anyone can use it with confidence."
         ],
-        accent_color=COLOR_AMBER
+        accent_color=COLOR_AMBER,
+        body_size=Pt(12)
     )
 
     add_card(
         slide,
         Inches(8.8), Inches(2.0), Inches(3.7), Inches(3.2),
-        "🚨 Emergency Escalation",
+        "🚨 1-Tap 1930 Helpline",
         [
-            "Direct 1-tap dialer for India's National Cybercrime Helpline (1930).",
-            "Direct reporting portal link to cybercrime.gov.in.",
-            "Emergency bank profile freeze checklist for victims."
+            "If a scam is confirmed, the app gives Indian users an instant 1-tap dialer for the National Cybercrime Helpline (1930).",
+            "Direct link to cybercrime.gov.in and emergency bank freeze checklists."
         ],
-        accent_color=COLOR_RED
+        accent_color=COLOR_RED,
+        body_size=Pt(12)
     )
 
     add_card(
         slide,
         Inches(0.8), Inches(5.4), Inches(11.7), Inches(1.3),
-        "⚡ Zero False-Positive Reputation Fast-Path",
+        "⚡ Zero False Alarms: Trusted Sites Pass in 3 Seconds",
         [
-            "Tranco Top-10K reputable domains (Wikipedia, Google, Gov portals) complete within 5 seconds with guaranteed SAFE verdicts.",
-            "Eliminates AI hallucinations and conserves inference compute on verified benign infrastructure."
+            "Nobody likes an overzealous security tool that cries wolf.",
+            "Phish&Chips checks the Tranco Top-10K reputable domains (like Wikipedia, Google, or government portals). If you scan Wikipedia, it confirms it as SAFE in under 3 seconds with zero false alarms."
         ],
-        accent_color=COLOR_GREEN
+        accent_color=COLOR_GREEN,
+        body_size=Pt(12)
     )
 
     add_footer(slide, 7)
     set_speaker_notes(slide, """
-Detection is only half the battle. Phish&Chips provides immediate remediation: a 1-click Abuse Takedown pack that SOC analysts can send to domain registrars, and a localized emergency drawer for Indian users featuring the 1930 National Cybercrime Helpline. It's trilingual, fully observable via Prometheus metrics, and our Tranco fast-path ensures zero false positives on reputable sites like Wikipedia.
+Finding a scam is only half the battle. What do you do once you find one?
+Phish&Chips gives users immediate, practical remediation.
+First: a 1-click takedown pack that you can email to the hosting provider to get the fake website shut down.
+Second: full multilingual support in English, Hindi, and Kannada, because frontline victims in India are heavily targeted in their local languages.
+Third: an emergency helpline drawer with a 1-tap dialer for India's 1930 Cybercrime helpline.
+And finally, trusted websites like Wikipedia are verified in 3 seconds with zero false alarms.
 """)
 
 
@@ -617,9 +637,9 @@ def build_slide_8(prs):
     slide = add_base_slide(prs)
     add_header(
         slide,
-        "Hackathon Submission Summary · Team alphax",
-        "Why Phish&Chips Leads the Vultr Agent Rush",
-        "Excellence across all four LabLab judging criteria."
+        "Hackathon Summary · Team alphax",
+        "Why Phish&Chips Stands Out",
+        "How our project addresses every single judging criterion with excellence."
     )
 
     add_card(
@@ -627,38 +647,38 @@ def build_slide_8(prs):
         Inches(0.8), Inches(2.0), Inches(5.7), Inches(2.2),
         "⚙️ Application of Technology",
         [
-            "Hardened Vultr Cloud Compute VM in Bangalore.",
-            "Vultr Serverless Inference (GLM-5.3) for deep threat synthesis.",
-            "Docker cgroups v2 + Playwright Chromium + Caddy automated TLS.",
-            "Native Prometheus /metrics and /api/health observability."
+            "Real production deployment on Vultr Cloud Compute (Bangalore).",
+            "Vultr Serverless Inference powering deep AI reasoning via GLM-5.3.",
+            "Hardened Docker cgroups v2, Caddy automated TLS, and Prometheus metrics."
         ],
-        accent_color=COLOR_BLUE
+        accent_color=COLOR_BLUE,
+        body_size=Pt(11.5)
     )
 
     add_card(
         slide,
         Inches(6.8), Inches(2.0), Inches(5.7), Inches(2.2),
-        "🎨 Presentation & User Experience",
+        "🎨 Presentation & Clarity",
         [
-            "Production dashboard at https://139.84.159.12.sslip.io.",
-            "Animated 4-stage pipeline graph and live SSE containment terminal.",
-            "Visual screenshot carousel, REA disassembly view, and cyber aesthetic.",
-            "3-minute video demonstrating explicit containment moments."
+            "Live interactive dashboard at https://139.84.159.12.sslip.io.",
+            "Real-time streaming terminal and animated 4-stage pipeline graph.",
+            "Everything explained in plain, intuitive English with clear visual proof."
         ],
-        accent_color=COLOR_AMBER
+        accent_color=COLOR_AMBER,
+        body_size=Pt(11.5)
     )
 
     add_card(
         slide,
         Inches(0.8), Inches(4.4), Inches(5.7), Inches(2.3),
-        "💼 Business & Practical Value",
+        "💼 Real Business & Human Value",
         [
-            "Solves the multi-billion dollar credential phishing crisis.",
-            "Zero analyst risk: inspects hostile links with Blast Radius Zero.",
-            "Zero false positives on top reputable domains (Tranco fast-path).",
-            "Immediate remediation via 1-click takedown pack & 1930 hotline."
+            "Protects everyday citizens and enterprise SOC teams from multi-billion dollar scams.",
+            "Completely eliminates analyst infection risk: Blast Radius Zero.",
+            "Provides instant evidence lockers and emergency reporting hotlines."
         ],
-        accent_color=COLOR_GREEN
+        accent_color=COLOR_GREEN,
+        body_size=Pt(11.5)
     )
 
     add_card(
@@ -666,22 +686,24 @@ def build_slide_8(prs):
         Inches(6.8), Inches(4.4), Inches(5.7), Inches(2.3),
         "✨ Originality & Novelty",
         [
-            "Blast Radius Zero containment architecture.",
-            "Pattern B Sandboxed Browser Use with Human Approval Decoy Pass.",
-            "Integrated Static REA Engine for WebAssembly & executables.",
-            "Trilingual localization (English / Hindi / Kannada)."
+            "True containment-first design: the sandbox is vaporized after each scan.",
+            "Pattern B Human Approval Decoy Pass outsmarts scammers with fake data.",
+            "Built-in code x-ray (REA Engine) for WebAssembly and binary drops."
         ],
-        accent_color=COLOR_RED
+        accent_color=COLOR_RED,
+        body_size=Pt(11.5)
     )
 
     add_footer(slide, 8)
     set_speaker_notes(slide, """
-Phish&Chips proves that autonomous AI agents can handle hazardous security tasks safely and effectively when built on solid cloud infrastructure. Thank you to Vultr and LabLab for this incredible challenge. Remember: fresh phish, fried in a sandbox. Thank you!
+To summarize: Phish&Chips proves that autonomous AI agents can handle dangerous cybersecurity tasks safely when built on Vultr's world-class cloud infrastructure.
+It excels on technology by combining Vultr Cloud Compute and Vultr Serverless Inference with hardened containers. It excels on presentation with real-time streaming and plain-English clarity. It delivers massive real-world business and human value. And its Blast Radius Zero architecture is truly original.
+Thank you to Vultr and LabLab. Remember: fresh phish, fried in a sandbox. Thank you!
 """)
 
 
 def main():
-    print("==> Generating Phish&Chips PowerPoint Presentation (.pptx)...")
+    print("==> Generating Plain English Phish&Chips PowerPoint Presentation (.pptx)...")
     prs = create_deck()
 
     build_slide_1(prs)

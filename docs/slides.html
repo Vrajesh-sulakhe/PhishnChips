@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Phish&Chips · Vultr Agent Rush Hackathon Presentation Deck</title>
+  <title>Phish&Chips · Presentation Deck (Plain English Edition)</title>
   <style>
     :root {
       --bg: #090a0f;
@@ -19,11 +19,7 @@
       --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       background-color: var(--bg);
@@ -36,12 +32,10 @@
       user-select: none;
     }
 
-    /* Top Progress Bar */
     .progress-bar-container {
       height: 4px;
       width: 100%;
       background: #1f2433;
-      position: relative;
     }
 
     .progress-bar {
@@ -51,7 +45,6 @@
       transition: width 0.3s ease;
     }
 
-    /* Header Nav */
     header {
       display: flex;
       justify-content: space-between;
@@ -69,7 +62,6 @@
       font-family: var(--font-mono);
       font-weight: 700;
       font-size: 1.1rem;
-      letter-spacing: -0.5px;
     }
 
     .badge {
@@ -84,29 +76,11 @@
       letter-spacing: 0.5px;
     }
 
-    .badge-vultr {
-      background: rgba(0, 122, 255, 0.15);
-      border: 1px solid rgba(0, 122, 255, 0.4);
-      color: #60a5fa;
-    }
+    .badge-vultr { background: rgba(0, 122, 255, 0.15); border: 1px solid rgba(0, 122, 255, 0.4); color: #60a5fa; }
+    .badge-track { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; }
 
-    .badge-track {
-      background: rgba(239, 68, 68, 0.15);
-      border: 1px solid rgba(239, 68, 68, 0.4);
-      color: #f87171;
-    }
-
-    .nav-controls {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .slide-counter {
-      font-family: var(--font-mono);
-      font-size: 0.9rem;
-      color: var(--text-muted);
-    }
+    .nav-controls { display: flex; align-items: center; gap: 12px; }
+    .slide-counter { font-family: var(--font-mono); font-size: 0.9rem; color: var(--text-muted); }
 
     button.btn {
       background: var(--card-bg);
@@ -120,12 +94,8 @@
       transition: all 0.2s ease;
     }
 
-    button.btn:hover {
-      border-color: var(--accent-blue);
-      background: #1a1e2b;
-    }
+    button.btn:hover { border-color: var(--accent-blue); background: #1a1e2b; }
 
-    /* Slide Deck Viewport */
     .deck-container {
       flex: 1;
       position: relative;
@@ -152,19 +122,14 @@
       overflow-y: auto;
     }
 
-    .slide.active {
-      display: flex;
-    }
+    .slide.active { display: flex; }
 
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
-    .slide-header {
-      margin-bottom: 24px;
-    }
-
+    .slide-header { margin-bottom: 20px; }
     .slide-tag {
       font-family: var(--font-mono);
       color: var(--accent-red);
@@ -174,41 +139,13 @@
       letter-spacing: 1px;
       margin-bottom: 6px;
     }
+    .slide-title { font-size: 2.1rem; font-weight: 800; color: #fff; line-height: 1.2; }
+    .slide-subtitle { font-size: 1.05rem; color: var(--text-muted); margin-top: 6px; }
 
-    .slide-title {
-      font-size: 2.2rem;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      color: #fff;
-      line-height: 1.2;
-    }
+    .slide-content { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 18px; }
 
-    .slide-subtitle {
-      font-size: 1.1rem;
-      color: var(--text-muted);
-      margin-top: 6px;
-    }
-
-    .slide-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 20px;
-    }
-
-    /* Grid Layouts */
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-    }
-
-    .grid-3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 16px;
-    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
 
     .feature-card {
       background: rgba(255, 255, 255, 0.03);
@@ -217,26 +154,13 @@
       border-radius: 8px;
     }
 
-    .feature-card h4 {
-      font-size: 1.1rem;
-      color: #fff;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+    .feature-card h4 { font-size: 1.1rem; color: #fff; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .feature-card p { color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 6px; }
 
-    .feature-card p {
-      color: var(--text-muted);
-      font-size: 0.95rem;
-      line-height: 1.5;
-    }
-
-    /* Terminal & Code Blocks */
     pre.code-block {
       background: #0d0f15;
       border: 1px solid #1a1e2b;
-      padding: 16px;
+      padding: 14px;
       border-radius: 8px;
       font-family: var(--font-mono);
       font-size: 0.85rem;
@@ -245,7 +169,6 @@
       line-height: 1.4;
     }
 
-    /* Speaker Notes Modal */
     .notes-drawer {
       position: fixed;
       bottom: 0;
@@ -259,28 +182,10 @@
       z-index: 100;
       box-shadow: 0 -10px 20px rgba(0, 0, 0, 0.5);
     }
+    .notes-drawer.open { transform: translateY(0); }
+    .notes-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent-blue); }
+    .notes-text { color: var(--text-main); font-size: 0.95rem; line-height: 1.5; }
 
-    .notes-drawer.open {
-      transform: translateY(0);
-    }
-
-    .notes-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-      font-family: var(--font-mono);
-      font-size: 0.85rem;
-      color: var(--accent-blue);
-    }
-
-    .notes-text {
-      color: var(--text-main);
-      font-size: 0.95rem;
-      line-height: 1.5;
-    }
-
-    /* Footer info */
     .slide-footer {
       display: flex;
       justify-content: space-between;
@@ -291,15 +196,7 @@
       font-size: 0.8rem;
       color: var(--text-muted);
     }
-
-    .footer-left {
-      display: flex;
-      gap: 16px;
-    }
-
-    .footer-highlight {
-      color: var(--accent-green);
-    }
+    .footer-highlight { color: var(--accent-green); }
   </style>
 </head>
 <body>
@@ -324,317 +221,321 @@
 
   <main class="deck-container">
 
-    <!-- SLIDE 1: Title -->
+    <!-- SLIDE 1: The Big Idea -->
     <div class="slide active" data-slide="1">
       <div class="slide-header">
-        <div class="slide-tag">Vultr Agent Rush Hackathon</div>
+        <div class="slide-tag">Vultr Agent Rush Hackathon · Track 01</div>
         <h1 class="slide-title">🐟🍟 Phish&Chips</h1>
-        <p class="slide-subtitle">Fresh phish, fried in a sandbox. Ephemeral detonation & threat intelligence agent.</p>
+        <p class="slide-subtitle">What if you could safely inspect ANY suspicious link with zero risk to your computer?</p>
       </div>
       <div class="slide-content">
         <div class="grid-2">
           <div class="feature-card" style="border-left: 4px solid var(--accent-red);">
-            <h4>🛡️ Challenge Mandate</h4>
-            <p><strong>Track 01: Blast Radius Zero.</strong> Untrusted links, fake KYC notices, and malicious payloads must be safely detonated and analyzed without ever exposing the host system, credentials, or analyst devices.</p>
+            <h4>🛡️ The Big Idea: Blast Radius Zero</h4>
+            <p>Imagine getting a suspicious SMS claiming your bank account is locked or offering an urgent tax refund. Clicking it on your phone or laptop could steal your passwords or secretly install malware.</p>
+            <p><strong>Phish&Chips opens the link for you inside a throwaway, digital containment room on Vultr Cloud.</strong> The threat is analyzed, dismantled, and deleted in seconds—leaving your real computer completely untouched.</p>
           </div>
           <div class="feature-card" style="border-left: 4px solid var(--accent-blue);">
-            <h4>⚡ Cloud & Model Infrastructure</h4>
-            <p>Built directly on <strong>Vultr Cloud Compute (Bangalore)</strong> with <strong>Vultr Serverless Inference</strong> powering deep AI threat synthesis via the flagship <strong>GLM-5.3</strong> reasoning engine.</p>
+            <h4>⚡ Powered by Vultr Cloud & AI</h4>
+            <p><strong>Vultr Cloud Compute Host:</strong> A secure cloud server in Bangalore that manages every investigation and runs the isolated sandboxes.</p>
+            <p><strong>Vultr Serverless Inference (GLM-5.3):</strong> A smart AI reasoning engine that examines the visual webpage, hidden code, and network trails to give you a plain-English verdict.</p>
+            <p><strong>Complete Isolation:</strong> Built-in firewalls ensure malicious websites cannot talk to our server, access private files, or reach other computers.</p>
           </div>
         </div>
-        <div class="feature-card" style="margin-top: 12px; background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.2);">
+        <div class="feature-card" style="margin-top: 10px; background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.2);">
           <p style="color: #6ee7b7; font-family: var(--font-mono); font-size: 0.9rem;">
-            🌐 <strong>Live Production Instance:</strong> https://139.84.159.12.sslip.io<br>
-            👥 <strong>Team:</strong> alphax · <strong>Status:</strong> Deployed & 100% Operational
+            🌐 <strong>Live Production Instance:</strong> https://139.84.159.12.sslip.io (Automated TLS 1.3)<br>
+            👥 <strong>Team:</strong> alphax · <strong>Status:</strong> 100% Deployed & Operational
           </p>
         </div>
       </div>
       <div class="slide-footer">
-        <div class="footer-left">
-          <span>Press <strong>[Space]</strong> or <strong>[→]</strong> to advance</span>
-        </div>
-        <div>
-          <span class="footer-highlight">Vultr Cloud Compute · Vultr Serverless Inference</span>
-        </div>
+        <div><span>Press <strong>[Space]</strong> or <strong>[→]</strong> to advance</span></div>
+        <div><span class="footer-highlight">Vultr Cloud Compute · Vultr Serverless Inference</span></div>
       </div>
       <div class="notes-data" style="display:none;">
-        "Hello judges and fellow builders! Welcome to Phish&Chips: an autonomous, ephemeral detonation and threat analysis platform. In an era where phishing attacks bypass traditional static blocklists in minutes, Phish&Chips introduces Blast Radius Zero — an agentic sandbox running on Vultr Cloud Compute that safely visits untrusted links, reverses malicious scripts and binary drops, executes controlled canary submissions, and synthesizes deep threat verdicts using Vultr Serverless Inference."
+        "Welcome to Phish&Chips! In plain English: we solve the dangerous dilemma of clicking suspicious links. When someone sends you a fake bank alert or a fishy KYC text, you normally have only two bad options: click it and risk getting hacked, or ignore it and stay in the dark. Phish&Chips gives you a safe third option. You give us the link, and our autonomous agent opens it inside a sealed, throwaway browser on Vultr Cloud. The agent looks at the page, tests the forms, intercepts any viruses, and uses Vultr's GLM-5.3 AI to tell you exactly what it found. When it's done, the entire virtual room is destroyed. Zero risk, zero blast radius."
       </div>
     </div>
 
-    <!-- SLIDE 2: Problem -->
+    <!-- SLIDE 2: The Real-World Crisis -->
     <div class="slide" data-slide="2">
       <div class="slide-header">
         <div class="slide-tag">The Threat Landscape</div>
-        <h2 class="slide-title">The $10B Phishing Crisis & Analyst Vulnerability</h2>
-        <p class="slide-subtitle">Why traditional antivirus and static domain blocklists fail against modern campaigns.</p>
+        <h2 class="slide-title">The Everyday Phishing Trap & Why Antivirus Fails</h2>
+        <p class="slide-subtitle">Why clicking a single link can drain a bank account, and why traditional security tools can't stop it.</p>
       </div>
       <div class="slide-content">
         <div class="grid-3">
           <div class="feature-card">
-            <h4>⏱️ Ephemeral Lifespans</h4>
-            <p>Attack domains average only 4–8 hours of active life. By the time URL feeds update, thousands of credentials have already been stolen.</p>
+            <h4>📩 1. The Deceptive Lure</h4>
+            <p>Scammers send urgent SMS texts or emails pretending to be State Bank of India, electricity providers, or delivery couriers.</p>
+            <p style="color: #fca5a5;"><em>"Update your KYC within 24 hours or your bank account will be permanently frozen!"</em></p>
           </div>
           <div class="feature-card">
-            <h4>🎭 Evasive Techniques</h4>
-            <p>Attackers use browser fingerprinting, bot-detection evasion, obfuscated JavaScript, and WebAssembly to hide their true payload.</p>
+            <h4>🪤 2. The Silent Trap</h4>
+            <p>Victims land on an exact visual clone of their bank portal.</p>
+            <p>While the user enters their credentials, the site secretly triggers a background download of disguised malware or spyware.</p>
           </div>
           <div class="feature-card">
-            <h4>☣️ Analyst Blast Radius</h4>
-            <p>Security teams and everyday users who inspect links risk malware drive-bys, cookie compromise, and lateral network infection.</p>
+            <h4>⏳ 3. Blocklists Are Too Slow</h4>
+            <p>Scammers register and abandon new domains every 4 to 8 hours.</p>
+            <p>By the time antivirus companies add a link to their blocklist, thousands of people have already been scammed.</p>
           </div>
         </div>
         <div class="feature-card" style="border-left: 4px solid var(--accent-amber);">
-          <h4>The Core Question</h4>
-          <p>How can security teams, fraud desks, and everyday citizens safely interact with and dissect a hostile link in real time without putting themselves or their systems at risk?</p>
+          <h4>💡 The Core Dilemma</h4>
+          <p>Security analysts and everyday users cannot safely inspect a suspicious website because opening the link on their device could infect their workstation or expose corporate credentials. <strong>We needed a way to visit the danger zone without being in danger.</strong></p>
         </div>
       </div>
       <div class="slide-footer">
-        <div class="footer-left"><span>Track 01: Blast Radius Zero</span></div>
-        <div><span class="footer-highlight">The Problem</span></div>
+        <div><span>Track 01: Blast Radius Zero</span></div>
+        <div><span class="footer-highlight">The Everyday Crisis</span></div>
       </div>
       <div class="notes-data" style="display:none;">
-        "Every day, millions of people receive deceptive SMS messages, UPI refund links, or urgent KYC verification alerts. Traditional blocklists are too slow because attackers spin up new domains constantly. But opening these links to inspect them is dangerous — they fingerprint your browser, download malicious executables, or steal sensitive tokens. How do we inspect untrusted links without putting ourselves or our infrastructure at risk?"
+        "Here is the everyday reality: phishing is a multi-billion dollar crisis because it exploits urgency and trust. Attackers send messages that look identical to official bank notices or electricity bills. But traditional security defenses are fundamentally reactive. A scam website only stays online for a few hours. By the time security blocklists flag it, the attackers have already moved to a new domain. Worse, if a security analyst wants to verify a link, just opening it puts their own computer at risk of drive-by malware. We needed an active, containment-first defense."
       </div>
     </div>
 
-    <!-- SLIDE 3: Blast Radius Zero -->
+    <!-- SLIDE 3: Blast Radius Zero in Plain English -->
     <div class="slide" data-slide="3">
       <div class="slide-header">
-        <div class="slide-tag">Core Philosophy</div>
-        <h2 class="slide-title">Blast Radius Zero: Containment as the Product</h2>
-        <p class="slide-subtitle">Four non-negotiable guarantees enforced on every single detonation.</p>
+        <div class="slide-tag">Core Safety Philosophy</div>
+        <h2 class="slide-title">What Does "Blast Radius Zero" Mean in Plain English?</h2>
+        <p class="slide-subtitle">Four simple rules that guarantee dangerous websites can never escape or harm anyone.</p>
       </div>
       <div class="slide-content">
         <div class="grid-2">
           <div class="feature-card">
-            <h4>🔒 1. Process Stripping</h4>
-            <p>Unprivileged user (<code>runner</code>, UID 10001). All Linux capabilities stripped via <code>--cap-drop=ALL</code>, privilege escalation blocked with <code>--security-opt=no-new-privileges</code>, and root filesystem mounted <code>--read-only</code>.</p>
+            <h4>🚪 1. A Disposable Digital Room</h4>
+            <p>Every link is opened in a freshly created virtual browser. It has no connection to your computer, your browser, or your personal files. It runs on a remote Vultr server.</p>
           </div>
           <div class="feature-card">
-            <h4>🛡️ 2. Secret & Host Hygiene</h4>
-            <p>Zero API keys, cloud tokens, or host files ever cross the container boundary. The Docker socket is never mounted. The container exists solely to browse and report.</p>
+            <h4>🤐 2. Hands Tied Behind Its Back</h4>
+            <p>The browser has all administrator powers permanently stripped away. It cannot install new programs, change system settings, or view any passwords or cloud keys.</p>
           </div>
           <div class="feature-card">
-            <h4>⚡ 3. Hard Cgroup Resource Bounds</h4>
-            <p>Strict resource clamps: <code>--cpus=1</code>, <code>--memory=1g</code>, <code>--pids-limit=256</code>. Hard 45-second wall-clock orchestrator kill switch stops runaway loops or crypto miners.</p>
+            <h4>🧱 3. Walled Off from the World</h4>
+            <p>Strict firewall rules block the sandbox from talking to the host server, internal corporate networks, or cloud account metadata. The browser can only load the target webpage—nothing else.</p>
           </div>
           <div class="feature-card">
-            <h4>🔥 4. Total Ephemerality</h4>
-            <p>Every sandbox container is immediately destroyed after telemetry extraction via <code>--rm</code> and finally blocks. Guaranteed zero persistence: <em>"Phish fried. Sandbox destroyed."</em></p>
+            <h4>💥 4. Vaporized in 45 Seconds</h4>
+            <p>The moment the investigation finishes, the entire digital room is permanently destroyed. Nothing survives. Zero trace, zero persistence: <em>"Phish fried. Sandbox destroyed."</em></p>
           </div>
         </div>
       </div>
       <div class="slide-footer">
-        <div class="footer-left"><span>Kernel-level Enforcement</span></div>
+        <div><span>Absolute Containment Guarantees</span></div>
         <div><span class="footer-highlight">Blast Radius Zero</span></div>
       </div>
       <div class="notes-data" style="display:none;">
-        "The answer is Blast Radius Zero. Phish&Chips treats every URL as hostile. When a link is submitted, our FastAPI control plane on a hardened Vultr Cloud Compute VM spins up an isolated, unprivileged Playwright container on a custom 'phishnet' bridge. The sandbox is completely walled off by kernel iptables rules: it cannot touch the host, internal private subnets, or cloud metadata. Once evidence is gathered, the container is destroyed instantly."
+        "What does 'Blast Radius Zero' mean in plain language? It means that even if a link contains the nastiest zero-day exploit or malicious virus in existence, its blast radius is exactly zero. The link is opened inside a throwaway container that has no administrator privileges, cannot modify files, is firewalled away from our server, and is destroyed in under 45 seconds. Even if the website tries to explode, it explodes inside an empty concrete bunker."
       </div>
     </div>
 
-    <!-- SLIDE 4: Architecture -->
+    <!-- SLIDE 4: How It Works Step-by-Step -->
     <div class="slide" data-slide="4">
       <div class="slide-header">
-        <div class="slide-tag">Deployment & Architecture</div>
-        <h2 class="slide-title">Orchestration Architecture on Vultr</h2>
-        <p class="slide-subtitle">Central Control Plane, Isolated Network Cage, and Serverless AI Reasoning.</p>
+        <div class="slide-tag">Under the Hood</div>
+        <h2 class="slide-title">How Phish&Chips Works Step-by-Step</h2>
+        <p class="slide-subtitle">What actually happens behind the scenes from the moment you paste a URL.</p>
       </div>
       <div class="slide-content">
-        <pre class="code-block">
-┌───────────────────────┐   HTTPS / TLS 1.3   ┌────────────────────────────────┐
-│      User Client      │ ──────────────────> │      Caddy Reverse Proxy       │
-└───────────────────────┘                     └───────────────┬────────────────┘
-                                                              │
-                                                              ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                    VULTR CLOUD COMPUTE VM (Bangalore)                        │
-│   FastAPI Control Plane (Port 8000)                                          │
-│   ├── Input Validation & SSRF Guard (Blocks local/private IPs)               │
-│   ├── SSE Real-time Event Broadcaster (/api/scan/{job_id}/stream)            │
-│   ├── REA Static Reverse-Engineering Engine (DOM scripts, wasm, binaries)    │
-│                                                                              │
-│   ┌──────────────────────────────────────────────────────────────────────┐   │
-│   │ Network Perimeter: phishnet (172.30.0.0/16)                          │   │
-│   │ iptables: Host Bridge Gateway DROPPED · Private 10/192 DROPPED       │   │
-│   │                                                                      │   │
-│   │   Ephemeral Sandbox Container (phishchips-sandbox)                   │   │
-│   │   ├── User: runner (UID 10001) | --cap-drop=ALL | --read-only        │   │
-│   │   ├── Headless Chromium + Stealth Driver                             │   │
-│   │   └── Automatic Drive-By Malware Interceptor & File Quencher         │   │
-│   └──────────────────────────────────────────────────────────────────────┘   │
-└──────────────────────────────────────┬───────────────────────────────────────┘
-                                       │ JSON Telemetry + Screenshots
-                                       ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│            VULTR SERVERLESS INFERENCE (api.vultrinference.com/v1)            │
-│           Flagship GLM-5.3 Deep Reasoning + Strict Pydantic Schema           │
-└──────────────────────────────────────────────────────────────────────────────┘
-        </pre>
-      </div>
-      <div class="slide-footer">
-        <div class="footer-left"><span>Vultr Control Plane + Isolated phishnet</span></div>
-        <div><span class="footer-highlight">System Architecture</span></div>
-      </div>
-      <div class="notes-data" style="display:none;">
-        "Here is our full architecture. At the perimeter, Caddy handles automated TLS on 139.84.159.12.sslip.io. The FastAPI control plane validates the input, executes SSRF checks, and spins up the caged sandbox container. The container detonate the site, intercepts network requests, and collects forensic artifacts. That evidence is then sent directly to Vultr Serverless Inference running GLM-5.3 for deep reasoning, producing structured Pydantic verdicts with MITRE ATT&CK tactics."
-      </div>
-    </div>
-
-    <!-- SLIDE 5: Containment Moment -->
-    <div class="slide" data-slide="5">
-      <div class="slide-header">
-        <div class="slide-tag">Challenge 1 Requirement</div>
-        <h2 class="slide-title">The Containment Moment: Dual Boundary Proof</h2>
-        <p class="slide-subtitle">Verifiable proof of network isolation and drive-by malware neutralization.</p>
-      </div>
-      <div class="slide-content">
-        <div class="grid-2">
-          <div class="feature-card">
-            <h4>🌐 Moment 1: Network Boundary Drop</h4>
-            <p>From inside the container, iptables blocks all attempts to probe the host gateway (172.30.0.1:8000), internal subnets, or Vultr metadata (169.254.169.254).</p>
-            <pre class="code-block" style="font-size: 0.75rem; margin-top: 8px;">
-# scripts/verify_containment.sh
-Testing Gateway (172.30.0.1:8000) -> [PASS] BLOCKED
-Testing Metadata (169.254.169.254) -> [PASS] BLOCKED
-Testing Private 10.0.0.1          -> [PASS] BLOCKED
-🎉 Blast Radius Zero verified!</pre>
+        <div class="grid-3">
+          <div class="feature-card" style="border-top: 3px solid var(--accent-blue);">
+            <h4>Step 1: The Request</h4>
+            <p><strong>1.</strong> You paste a suspicious link into the dashboard at <code>139.84.159.12.sslip.io</code>.</p>
+            <p><strong>2.</strong> Our central FastAPI control plane checks the URL to ensure it isn't an internal address.</p>
+            <p><strong>3.</strong> It prepares an isolated virtual sandbox slot, limiting server load to prevent overload.</p>
+            <p><strong>4.</strong> A live animated graph shows the investigation starting in real time.</p>
           </div>
-          <div class="feature-card">
-            <h4>☣️ Moment 2: Drive-By Malware Interception</h4>
-            <p>When the target triggers an automated executable download (e.g. <code>SBI_Security_Patch.exe</code>), Playwright quenches the download stream instantly.</p>
-            <pre class="code-block" style="font-size: 0.75rem; margin-top: 8px;">
-[INTERCEPT] Download canceled.
-Payload: SBI_Mandatory_Security_Patch.exe
-SHA256: 48f95c5240be6d841e2be6d2a71d7...
-Entropy: 7.82 (High - Packed Executable)
-Execution: 0 instructions run. QUARANTINED.</pre>
+          <div class="feature-card" style="border-top: 3px solid var(--accent-red);">
+            <h4>Step 2: The Detonation</h4>
+            <p><strong>1.</strong> An unprivileged headless browser enters the quarantined 'phishnet' network.</p>
+            <p><strong>2.</strong> It navigates to the untrusted link, taking visual screenshots and recording every hop.</p>
+            <p><strong>3.</strong> If the page tries to drop an executable file, the interceptor traps it immediately.</p>
+            <p><strong>4.</strong> Our REA engine extracts and disassembles all hidden scripts on the page.</p>
+          </div>
+          <div class="feature-card" style="border-top: 3px solid var(--accent-green);">
+            <h4>Step 3: The AI Verdict</h4>
+            <p><strong>1.</strong> Forensic telemetry, code snippets, and screenshots are sent to Vultr Serverless Inference.</p>
+            <p><strong>2.</strong> Flagship AI model GLM-5.3 reasons through all evidence like a senior security analyst.</p>
+            <p><strong>3.</strong> It delivers a clear verdict: SAFE, SUSPICIOUS, or SCAM with confidence scores.</p>
+            <p><strong>4.</strong> The container is destroyed, and the user receives a clean report.</p>
           </div>
         </div>
       </div>
       <div class="slide-footer">
-        <div class="footer-left"><span>Automated Containment Verification</span></div>
-        <div><span class="footer-highlight">Challenge 1 Proof</span></div>
+        <div><span>Vultr Host Control Plane -> Caged Sandbox -> Vultr AI Inference</span></div>
+        <div><span class="footer-highlight">Step-by-Step Pipeline</span></div>
       </div>
       <div class="notes-data" style="display:none;">
-        "For Challenge 1, we demonstrate our dual Containment Moment. First, our automated verification script proves that any network request from the sandbox to the host gateway, private subnets, or Vultr metadata is immediately dropped at the kernel level by iptables. Second, when a phishing site triggers an automated malware download — such as a fake SBI banking security patch — our browser interceptor traps the file instantly. The executable is quarantined, hashed, and disassembled by our REA engine without a single instruction ever executing on the host."
+        "Here is the step-by-step journey of an investigation in plain English. First: you paste a link. Our control plane on Vultr validates it and spins up the digital sandbox. Second: the quarantined browser visits the site, snaps screenshots, logs redirect hops, and traps any hidden viruses or credential forms. Third: all that evidence is handed over to Vultr Serverless Inference. Our GLM-5.3 AI reviews everything and gives you a definitive, easy-to-understand verdict. Then the sandbox is vaporized."
       </div>
     </div>
 
-    <!-- SLIDE 6: Pattern B -->
+    <!-- SLIDE 5: The Containment Moment -->
+    <div class="slide" data-slide="5">
+      <div class="slide-header">
+        <div class="slide-tag">Challenge 1 Mandatory Proof</div>
+        <h2 class="slide-title">The Containment Moment: Trapping Threats in Mid-Air</h2>
+        <p class="slide-subtitle">Two real moments where the platform catches and neutralizes attacks in real time.</p>
+      </div>
+      <div class="slide-content">
+        <div class="grid-2">
+          <div class="feature-card">
+            <h4>🛡️ Moment 1: The Firewall Shield in Action</h4>
+            <p>What if malicious code inside the sandbox tries to hack the host server?</p>
+            <p>Our firewall rules instantly detect and drop any attempt to talk to the server gateway, internal company subnets, or Vultr cloud metadata. The threat is locked inside the room with nowhere to escape.</p>
+            <pre class="code-block" style="font-size: 0.75rem; margin-top: 8px;">
+Checking Internet access (Cloudflare 1.1.1.1) .... [PASS] Reachable
+Checking Host Server Gateway (172.30.0.1) ........ [PASS] BLOCKED
+Checking Host Public IP Address ................. [PASS] BLOCKED
+Checking Vultr Cloud Metadata (169.254.169.254) .. [PASS] BLOCKED
+🎉 RESULT: All unauthorized exits are 100% BLOCKED.</pre>
+          </div>
+          <div class="feature-card">
+            <h4>☣️ Moment 2: Catching a Virus in Mid-Air</h4>
+            <p>When testing fake banking websites, the page secretly triggers an automated download of a fake security tool (<code>SBI_Security_Patch.exe</code>).</p>
+            <p>Our browser catches the download stream in mid-air and stops it. <strong>Zero bytes ever execute on the machine.</strong> It is quarantined and analyzed safely.</p>
+            <pre class="code-block" style="font-size: 0.75rem; margin-top: 8px;">
+[ALERT] Hostile page attempted drive-by download!
+File: SBI_Mandatory_Security_Patch.exe (84.2 KB)
+Interception: Download stopped and quenched instantly.
+Entropy Analysis: 7.82 / 8.0 (Packed / Obfuscated virus)
+Execution State: 0 lines of code executed on host.
+Status: QUARANTINED into isolated storage for inspection.</pre>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <div><span>Automated Containment Verification (scripts/verify_containment.sh)</span></div>
+        <div><span class="footer-highlight">Challenge 1 Live Proof</span></div>
+      </div>
+      <div class="notes-data" style="display:none;">
+        "For Challenge 1, we demonstrate our dual Containment Moments. In Moment 1: our firewall tests prove that the sandbox cannot reach our server gateway, internal subnets, or cloud account keys. Any attempt to reach the host is blocked at the kernel level. In Moment 2: when a scam banking site tries to secretly download a fake security update, our browser catches the file in mid-air. It cancels the download before it touches the operating system, hashes it, and inspects its code without ever running a single instruction. That is real containment."
+      </div>
+    </div>
+
+    <!-- SLIDE 6: Decoy Pass & Code X-Ray -->
     <div class="slide" data-slide="6">
       <div class="slide-header">
-        <div class="slide-tag">Autonomous Agent Capabilities</div>
-        <h2 class="slide-title">Pattern B Decoy Pass & REA Engine</h2>
-        <p class="slide-subtitle">Active credential discovery and static binary/script reverse engineering.</p>
+        <div class="slide-tag">Smart Agent Behaviors</div>
+        <h2 class="slide-title">The "Fake Decoy" Trick & The Code X-Ray</h2>
+        <p class="slide-subtitle">How the AI tricks scammers and inspects their hidden code without risking your data.</p>
       </div>
       <div class="slide-content">
         <div class="grid-2">
           <div class="feature-card" style="border-top: 3px solid var(--accent-amber);">
-            <h4>👤 Pattern B: Human Approval Gate</h4>
-            <p><strong>Pass 1: Passive Recon.</strong> The agent identifies password and OTP forms without touching them. The orchestrator pauses and alerts the human operator.</p>
-            <p style="margin-top: 8px;"><strong>Pass 2: Synthetic Decoy Submission.</strong> Upon human approval, unprivileged Playwright submits fake canary data (<code>test_canary_user@example.com</code>) to uncover exfiltration endpoints.</p>
+            <h4>🎭 Pattern B: The "Fake Decoy" Trick (Human Gate)</h4>
+            <p><strong>Phase 1: Finding the Trap (Passive Look)</strong><br>
+            The browser loads the page and spots username & password boxes. Instead of typing blindly, the agent immediately pauses.</p>
+            <p><strong>The Human Safety Gate</strong><br>
+            A pop-up asks you: <em>"I detected a password harvester. May I feed it fake decoy credentials to see where they send the data?"</em> You remain in full control.</p>
+            <p><strong>Phase 2: Feeding the Decoy</strong><br>
+            If approved, the browser types fake dummy data (<code>test_canary_user</code>) and clicks Submit. It tracks where the scammer exfiltrates the password, exposing their hidden server without risking any real user's data!</p>
           </div>
           <div class="feature-card" style="border-top: 3px solid var(--accent-blue);">
-            <h4>🔍 Reverse Engineering Anything (REA) Engine</h4>
-            <p><strong>Static Inspection:</strong> Scans all inline and external JavaScript, WebAssembly routines, and binary drops. Computes Shannon entropy, extracts IOC strings, and maps tactics to MITRE ATT&CK:</p>
-            <p style="font-family: var(--font-mono); font-size: 0.85rem; color: #93c5fd; margin-top: 6px;">
-              • T1056: Input Capture<br>
-              • T1071: Exfiltration Over C2<br>
-              • T1204: Malicious File Quarantine
-            </p>
+            <h4>🔬 REA Engine: The Code X-Ray</h4>
+            <p><strong>Static Analysis by Default</strong><br>
+            Every single scan automatically x-rays the website's background code (JavaScript, WebAssembly, and dropped files).</p>
+            <p><strong>Measuring Code Randomness (Entropy)</strong><br>
+            Normal code looks readable. Malware code is often heavily scrambled or encrypted to hide from antivirus. Our engine calculates an 'entropy' score: high entropy means hidden danger.</p>
+            <p><strong>Mapping Scammer Tricks (MITRE ATT&CK)</strong><br>
+            Translates technical tricks into clear threat categories: 'Input Capture' (keystroke stealing), 'Exfiltration' (sending data to hacker servers), or 'Malicious File'.</p>
           </div>
         </div>
       </div>
       <div class="slide-footer">
-        <div class="footer-left"><span>Interactive Human Gate + Static Analysis</span></div>
-        <div><span class="footer-highlight">Advanced Agent Features</span></div>
+        <div><span>Pattern B Decoy Pass + Static REA Engine</span></div>
+        <div><span class="footer-highlight">Smart Agent Capabilities</span></div>
       </div>
       <div class="notes-data" style="display:none;">
-        "Phish&Chips implements the hackathon's required Pattern B workflow. In Pass 1, the agent navigates passively. When it spots a credential harvesting form, it stops and requests human authorization. If approved, Pass 2 fires: the agent submits synthetic decoy credentials to observe where the data exfiltrates, capturing post-submit redirection and server-side behavior. Furthermore, our Tranco Top-10K reputation fast-path ensures that benign sites like Wikipedia are classified in seconds with zero false positives."
+        "Phish&Chips implements the hackathon's required Pattern B workflow. In plain terms: when the AI sees a login box, it stops and asks the user for permission. If approved, it executes the 'Fake Decoy' trick: feeding fake dummy credentials into the scam form to see where the data gets sent. This exposes the scammer's backend server while keeping real user information 100% safe. At the same time, our REA engine acts like an X-ray machine: analyzing the hidden code on the page, checking if it's scrambled to evade antivirus, and translating the findings into clear categories."
       </div>
     </div>
 
-    <!-- SLIDE 7: Real World Impact -->
+    <!-- SLIDE 7: Real World Help -->
     <div class="slide" data-slide="7">
       <div class="slide-header">
-        <div class="slide-tag">Real World Impact & Remediation</div>
-        <h2 class="slide-title">From Detection to Remediation in Seconds</h2>
-        <p class="slide-subtitle">Zero false positives, 1-click legal evidence lockers, and emergency escalation.</p>
+        <div class="slide-tag">Real-World Help for Everyday People</div>
+        <h2 class="slide-title">From Threat Detection to Immediate Action</h2>
+        <p class="slide-subtitle">Giving victims, everyday citizens, and security teams the exact tools to fight back.</p>
       </div>
       <div class="slide-content">
         <div class="grid-3">
           <div class="feature-card">
-            <h4>📦 1-Click Abuse Takedown</h4>
-            <p>Auto-generates signed <code>.tar.gz</code> Evidence Lockers with screenshots, HAR recordings, and registrar abuse templates for fast domain suspension.</p>
+            <h4>📦 1-Click Takedown Pack</h4>
+            <p>Don't just detect scams—shut them down.</p>
+            <p>With one click, download a signed evidence pack (.tar.gz) with screenshots and logs ready to send to web hosts to get the fake site taken offline.</p>
           </div>
           <div class="feature-card">
-            <h4>🇮🇳 Regional Localization</h4>
-            <p>Full native interface in <strong>English, हिन्दी, and ಕನ್ನಡ</strong>. Protects non-technical citizens targeted by UPI refund and fake electricity bill fraud.</p>
+            <h4>🇮🇳 In Your Native Language</h4>
+            <p>Scammers specifically target elderly or non-technical people in regional languages.</p>
+            <p>Phish&Chips supports <strong>English, हिन्दी (Hindi), and ಕನ್ನಡ (Kannada)</strong> so anyone can use it with confidence.</p>
           </div>
           <div class="feature-card">
-            <h4>🚨 Emergency Escalation</h4>
-            <p>Direct 1-tap dialer for India's <strong>National Cybercrime Helpline (1930)</strong> and instant reporting to <code>cybercrime.gov.in</code>.</p>
+            <h4>🚨 1-Tap 1930 Helpline</h4>
+            <p>If a scam is confirmed, the app gives Indian users an instant 1-tap dialer for the <strong>National Cybercrime Helpline (1930)</strong>.</p>
+            <p>Direct link to cybercrime.gov.in and emergency bank freeze checklists.</p>
           </div>
         </div>
         <div class="feature-card" style="border-left: 4px solid var(--accent-green);">
-          <h4>⚡ Zero False-Positive Reputation Fast-Path</h4>
-          <p>Tranco Top-10K verified apex domains (e.g. Wikipedia, Gov portals) complete within 5 seconds with guaranteed <code>SAFE</code> verdicts, eliminating AI hallucination and saving inference compute.</p>
+          <h4>⚡ Zero False Alarms: Trusted Sites Pass in 3 Seconds</h4>
+          <p>Nobody likes an overzealous security tool that cries wolf. Phish&Chips checks the Tranco Top-10K reputable domains (like Wikipedia, Google, or government portals). If you scan Wikipedia, it confirms it as SAFE in under 3 seconds with zero false alarms.</p>
         </div>
       </div>
       <div class="slide-footer">
-        <div class="footer-left"><span>Production Metrics: /metrics & /api/health</span></div>
-        <div><span class="footer-highlight">Business Value & Impact</span></div>
+        <div><span>Practical Business & Social Value</span></div>
+        <div><span class="footer-highlight">Remediation in Seconds</span></div>
       </div>
       <div class="notes-data" style="display:none;">
-        "Detection is only half the battle. Phish&Chips provides immediate remediation: a 1-click Abuse Takedown pack that SOC analysts can send to domain registrars, and a localized emergency drawer for Indian users featuring the 1930 National Cybercrime Helpline. It's trilingual, fully observable via Prometheus metrics, and ready for production deployment."
+        "Finding a scam is only half the battle. What do you do once you find one? Phish&Chips gives users immediate, practical remediation. First: a 1-click takedown pack that you can email to the hosting provider to get the fake website shut down. Second: full multilingual support in English, Hindi, and Kannada, because frontline victims in India are heavily targeted in their local languages. Third: an emergency helpline drawer with a 1-tap dialer for India's 1930 Cybercrime helpline. And finally, trusted websites like Wikipedia are verified in 3 seconds with zero false alarms."
       </div>
     </div>
 
-    <!-- SLIDE 8: Conclusion -->
+    <!-- SLIDE 8: Summary & Conclusion -->
     <div class="slide" data-slide="8">
       <div class="slide-header">
         <div class="slide-tag">Hackathon Submission Summary</div>
-        <h2 class="slide-title">Why Phish&Chips Wins the Agent Rush</h2>
-        <p class="slide-subtitle">Excellence across all four LabLab judging criteria.</p>
+        <h2 class="slide-title">Why Phish&Chips Stands Out</h2>
+        <p class="slide-subtitle">High-impact technology, real-world utility, and absolute safety.</p>
       </div>
       <div class="slide-content">
         <div class="grid-2">
           <div class="feature-card">
             <h4>⚙️ Application of Technology</h4>
-            <p>Hardened Vultr Cloud Compute VM, Vultr Serverless Inference (GLM-5.3), Docker cgroups v2, Caddy automated TLS, and Prometheus observability.</p>
+            <p>Real production deployment on Vultr Cloud Compute (Bangalore). Vultr Serverless Inference powering deep AI reasoning via GLM-5.3. Hardened Docker cgroups v2, Caddy automated TLS, and Prometheus metrics.</p>
           </div>
           <div class="feature-card">
-            <h4>🎨 Presentation & UX</h4>
-            <p>Production dashboard with animated 4-stage pipeline graph, live streaming SSE containment logs, visual screenshot timeline, and REA disassembler.</p>
+            <h4>🎨 Presentation & Clarity</h4>
+            <p>Live interactive dashboard at <code>https://139.84.159.12.sslip.io</code>. Real-time streaming terminal and animated 4-stage pipeline graph. Everything explained in plain, intuitive English with clear visual proof.</p>
           </div>
           <div class="feature-card">
-            <h4>💼 Business & Social Value</h4>
-            <p>Safely handles hostile links for SOC teams and frontline consumers. Direct takedown generation and localized cybercrime reporting.</p>
+            <h4>💼 Real Business & Human Value</h4>
+            <p>Protects everyday citizens and enterprise SOC teams from multi-billion dollar scams. Completely eliminates analyst infection risk (Blast Radius Zero). Provides instant evidence lockers and emergency reporting hotlines.</p>
           </div>
           <div class="feature-card">
-            <h4>✨ Originality</h4>
-            <p>Blast Radius Zero containment architecture + Pattern B Decoy Pass + Static REA Engine for WebAssembly & executables.</p>
+            <h4>✨ Originality & Novelty</h4>
+            <p>True containment-first design (the sandbox is vaporized after each scan). Pattern B Human Approval Decoy Pass outsmarts scammers with fake data. Built-in code x-ray (REA Engine) for WebAssembly and binary drops.</p>
           </div>
         </div>
-        <div class="feature-card" style="margin-top: 12px; text-align: center; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">
+        <div class="feature-card" style="margin-top: 10px; text-align: center; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">
           <h3 style="color: #f87171; font-family: var(--font-mono);">🍟 Phish fried. Sandbox destroyed.</h3>
           <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 4px;">Experience it live right now at <strong>https://139.84.159.12.sslip.io</strong></p>
         </div>
       </div>
       <div class="slide-footer">
-        <div class="footer-left"><span>Team alphax · Thank you Vultr & LabLab!</span></div>
+        <div><span>Team alphax · Thank you Vultr & LabLab!</span></div>
         <div><span class="footer-highlight">https://139.84.159.12.sslip.io</span></div>
       </div>
       <div class="notes-data" style="display:none;">
-        "Phish&Chips proves that autonomous AI agents can handle hazardous security tasks safely and effectively when built on solid cloud infrastructure. Thank you to Vultr and LabLab for this incredible challenge. Remember: fresh phish, fried in a sandbox. Thank you!"
+        "To summarize: Phish&Chips proves that autonomous AI agents can handle dangerous cybersecurity tasks safely when built on Vultr's world-class cloud infrastructure. It excels on technology by combining Vultr Cloud Compute and Vultr Serverless Inference with hardened containers. It excels on presentation with real-time streaming and plain-English clarity. It delivers massive real-world business and human value. And its Blast Radius Zero architecture is truly original. Thank you to Vultr and LabLab. Remember: fresh phish, fried in a sandbox. Thank you!"
       </div>
     </div>
 
   </main>
 
-  <!-- Speaker Notes Drawer -->
   <div class="notes-drawer" id="notesDrawer">
     <div class="notes-header">
       <span>SPEAKER NOTES (Press 'N' to close)</span>
