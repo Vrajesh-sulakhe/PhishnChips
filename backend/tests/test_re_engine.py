@@ -174,3 +174,4 @@ def test_analyze_quarantined_artifacts(tmp_path):
     assert len(summary["binaries"]) == 1
     assert len(summary["wasm_modules"]) == 1
     assert summary["risk_level"] in ("HIGH", "CRITICAL")
+

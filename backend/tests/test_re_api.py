@@ -83,3 +83,4 @@ def test_db_persistence_re_intelligence(tmp_path, monkeypatch):
     matching = [s for s in recent if s["job_id"] == job_id]
     assert len(matching) == 1
     assert matching[0]["re_intelligence"]["attribution_summary"] == "In-memory WASM evasion detected"
+
