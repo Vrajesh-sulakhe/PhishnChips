@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "frontend",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://139.84.159.12.sslip.io/api/:path*"
+    },
+    {
+      "source": "/metrics",
+      "destination": "https://139.84.159.12.sslip.io/metrics"
+    }
+  ]
+}
